@@ -46,13 +46,14 @@ export default function CreateGroupScreen({ navigation }) {
 
     try {
       const groupRef = push(ref(realtimeDb, 'Groups'));
-      const groupData = {
+      const members = {};
+      memberIds.forEach(uid => { members[uid] = true; });
+      await set(groupRef, {
         name: groupName.trim(),
         createdBy: currentUid,
         createdAt: Date.now().toString(),
-      };
-      memberIds.forEach(uid => { groupData[`members/${uid}`] = true; });
-      await set(groupRef, groupData);
+        members,
+      });
       Alert.alert('Success', 'Group created!');
       navigation.goBack();
     } catch (err) {

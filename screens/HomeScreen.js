@@ -1,5 +1,6 @@
-import React, { useLayoutEffect, useState, useEffect } from 'react';
+import React, { useLayoutEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { auth, realtimeDb } from '../firebase';
 import { ref, onValue, off, get } from 'firebase/database';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
@@ -31,7 +32,7 @@ export default function HomeScreen({ navigation }) {
     });
   }, [navigation]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!currentUid) return;
 
     const chatlistRef = ref(realtimeDb, `Chatlist/${currentUid}`);
@@ -68,7 +69,7 @@ export default function HomeScreen({ navigation }) {
 
     onValue(chatlistRef, onChatData);
     return () => off(chatlistRef, 'value', onChatData);
-  }, [currentUid]);
+  }, [currentUid]));
 
   const onPress = (item) => {
     if (item.type === 'group') {
