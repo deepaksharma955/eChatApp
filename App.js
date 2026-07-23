@@ -16,6 +16,9 @@ import ProfileScreen from './screens/ProfileScreen';
 import FriendRequestsScreen from './screens/FriendRequestsScreen';
 import CreateGroupScreen from './screens/CreateGroupScreen';
 import GroupChatScreen from './screens/GroupChatScreen';
+import AddMemberScreen from './screens/AddMemberScreen';
+import JoinGroupScreen from './screens/JoinGroupScreen';
+import DiscoverGroupsScreen from './screens/DiscoverGroupsScreen';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 
 const Stack = createStackNavigator();
@@ -83,6 +86,8 @@ function DrawerNavigator() {
       <Drawer.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile', drawerIcon: ({color}) => <Icon name="account-circle" size={22} color={color} /> }} />
       <Drawer.Screen name="FriendRequests" component={FriendRequestsScreen} options={{ title: 'Friend Requests', drawerIcon: ({color}) => <Icon name="bell" size={22} color={color} /> }} />
       <Drawer.Screen name="CreateGroup" component={CreateGroupScreen} options={{ title: 'New Group', drawerIcon: ({color}) => <Icon name="account-group" size={22} color={color} /> }} />
+      <Drawer.Screen name="JoinGroup" component={JoinGroupScreen} options={{ title: 'Join Group', drawerIcon: ({color}) => <Icon name="link-variant" size={22} color={color} /> }} />
+      <Drawer.Screen name="DiscoverGroups" component={DiscoverGroupsScreen} options={{ title: 'Discover Groups', drawerIcon: ({color}) => <Icon name="account-search" size={22} color={color} /> }} />
     </Drawer.Navigator>
   );
 }
@@ -129,6 +134,17 @@ function MainStack() {
         component={GroupChatScreen} 
         options={{
           headerShown: true,
+          headerStyle: { backgroundColor: '#1E1E1E' },
+          headerTintColor: '#f57c00',
+          headerTitleStyle: { fontWeight: 'bold' },
+        }}
+      />
+      <Stack.Screen 
+        name="AddMember" 
+        component={AddMemberScreen} 
+        options={{
+          headerShown: true,
+          title: 'Add Members',
           headerStyle: { backgroundColor: '#1E1E1E' },
           headerTintColor: '#f57c00',
           headerTitleStyle: { fontWeight: 'bold' },

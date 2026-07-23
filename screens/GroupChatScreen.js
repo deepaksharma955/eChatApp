@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Text, Alert } from 'react-native';
 import { GiftedChat, Bubble, Send, InputToolbar, Day } from 'react-native-gifted-chat';
 import { ref, onValue, off, push, set, get } from 'firebase/database';
 import { auth, realtimeDb } from '../firebase';
@@ -8,6 +8,8 @@ import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 export default function GroupChatScreen({ route, navigation }) {
   const [messages, setMessages] = useState([]);
   const [groupName, setGroupName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [memberCount, setMemberCount] = useState(0);
   const { groupId } = route.params || {};
   const currentUid = auth.currentUser?.uid;
 
@@ -15,14 +17,36 @@ export default function GroupChatScreen({ route, navigation }) {
     if (!groupId) return;
     get(ref(realtimeDb, `Groups/${groupId}`)).then((snap) => {
       if (snap.exists()) {
-        setGroupName(snap.val().name || 'Group');
+        const d = snap.val();
+        setGroupName(d.name || 'Group');
+        setInviteCode(d.inviteCode || '');
+        setMemberCount(d.members ? Object.keys(d.members).length : 0);
       }
     });
   }, [groupId]);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: groupName || 'Group Chat' });
+    navigation.setOptions({
+      title: groupName || 'Group Chat',
+      headerRight: () => (
+        <TouchableOpacity style={{ marginRight: 16 }} onPress={showMenu}>
+          <Icon name="dots-vertical" size={24} color="#f57c00" />
+        </TouchableOpacity>
+      ),
+    });
   }, [navigation, groupName]);
+
+  const showMenu = () => {
+    Alert.alert(groupName || 'Group', `${memberCount} members\nCode: ${inviteCode || 'N/A'}`, [
+      { text: 'Add Members', onPress: () => navigation.navigate('AddMember', { groupId }) },
+      { text: `Invite Code: ${inviteCode || 'N/A'}`, onPress: () => {
+        if (inviteCode) {
+          Alert.alert('Invite Code', `Share this code: ${inviteCode}`);
+        }
+      }},
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   useEffect(() => {
     if (!groupId) return;
@@ -113,4 +137,3 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1E1E1E' },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f57c00', justifyContent: 'center', alignItems: 'center', elevation: 4 },
 });
-
