@@ -1,12 +1,14 @@
 import 'react-native-gesture-handler';
-import React, { useState, createContext, useContext, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useState, createContext, useContext, useEffect, useRef } from 'react';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
-import { View, ActivityIndicator, Alert, Text, StyleSheet, AppState } from 'react-native';
+import { View, ActivityIndicator, Alert, Text, StyleSheet, AppState, Platform } from 'react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, realtimeDb } from './firebase';
 import { ref, update } from 'firebase/database';
+import * as Notifications from 'expo-notifications';
+import { registerForPushNotifications } from './notifications';
 import LoginScreen from './screens/LoginScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import ChatScreen from './screens/ChatScreen';
@@ -166,13 +168,40 @@ function AuthStack() {
 function RootNavigator() {
   const { user, setUser } = useContext(AuthenticatedUserContext);
   const [isLoading, setIsLoading] = useState(true);
+  const navigationRef = useRef(null);
+  const notificationResponseListener = useRef(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async authenticatedUser => {
-      authenticatedUser ? setUser(authenticatedUser) : setUser(null);
+      if (authenticatedUser) {
+        setUser(authenticatedUser);
+        if (Platform.OS !== 'web') {
+          registerForPushNotifications();
+        }
+      } else {
+        setUser(null);
+      }
       setIsLoading(false);
     });
     return unsubscribeAuth;
+  }, []);
+
+  useEffect(() => {
+    notificationResponseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data?.chatId && navigationRef.current) {
+        if (data.isGroup) {
+          navigationRef.current.navigate('GroupChat', { groupId: data.chatId });
+        } else {
+          navigationRef.current.navigate('Chat', { roomId: data.chatId, roomName: data.senderName || 'Chat' });
+        }
+      }
+    });
+    return () => {
+      if (notificationResponseListener.current) {
+        notificationResponseListener.current.remove();
+      }
+    };
   }, []);
 
   if (isLoading) {
@@ -184,7 +213,7 @@ function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {user ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
   );
