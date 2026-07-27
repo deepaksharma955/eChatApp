@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
@@ -24,8 +24,8 @@ export default function LoginScreen({ navigation }) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
-        <Icon name="chat" size={60} color="#f57c00" />
-        <Text style={styles.appName}>EchatApp</Text>
+        <Image source={require('../assets/eChatlogo.png')} style={{ width: 80, height: 80, marginBottom: 8 }} resizeMode="contain" />
+        <Text style={styles.appName}>eChat</Text>
       </View>
 
       <Text style={styles.title}>Welcome Back</Text>
@@ -69,6 +69,10 @@ export default function LoginScreen({ navigation }) {
           <Icon name={showPassword ? 'eye-off' : 'eye'} size={22} color="#888" />
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotRow}>
+        <Text style={styles.forgotText}>Forgot Password?</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={onHandleLogin} activeOpacity={0.8}>
         <Text style={styles.buttonText}>Log In</Text>
@@ -149,6 +153,15 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     padding: 4,
+  },
+  forgotRow: {
+    alignSelf: 'flex-end',
+    marginBottom: 16,
+  },
+  forgotText: {
+    color: '#f57c00',
+    fontSize: 13,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: '#f57c00',

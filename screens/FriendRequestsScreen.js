@@ -7,6 +7,7 @@ import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 export default function FriendRequestsScreen() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [acceptingId, setAcceptingId] = useState(null);
   const currentUid = auth.currentUser?.uid;
 
   useEffect(() => {
@@ -55,24 +56,37 @@ export default function FriendRequestsScreen() {
     return () => off(reqRef);
   }, [currentUid]);
 
+  const showMsg = (title, msg) => {
+    try { Alert.alert(title, msg); } catch (_) {}
+    try { window.alert(`${title}: ${msg}`); } catch (_) {}
+  };
+
   const accept = async (otherUid, otherUser) => {
+    setAcceptingId(otherUid);
     try {
       const me = await get(child(ref(realtimeDb), `Users/${currentUid}`));
       const myData = me.val() || {};
-      await set(ref(realtimeDb, `Friends/${currentUid}/${otherUid}`), { id: otherUid, username: otherUser.username, useremail: otherUser.useremail });
-      await set(ref(realtimeDb, `Friends/${otherUid}/${currentUid}`), { id: currentUid, username: myData.username, useremail: myData.useremail });
-      await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}/status`), 'accepted');
-    } catch (err) { Alert.alert('Error', err.message); }
+      await set(ref(realtimeDb, `Friends/${currentUid}/${otherUid}`), { id: otherUid, username: otherUser.username || '', useremail: otherUser.useremail || '' });
+      await set(ref(realtimeDb, `Friends/${otherUid}/${currentUid}`), { id: currentUid, username: myData.username || '', useremail: myData.useremail || '' });
+      await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}`), null);
+      setRequests(prev => prev.filter(r => !(r.id === otherUid && r.direction === 'incoming')));
+      showMsg('Accepted', `You are now friends with ${otherUser.username || otherUid}`);
+    } catch (err) { showMsg('Error', err.message || 'Accept failed'); }
+    setAcceptingId(null);
   };
 
   const reject = async (otherUid) => {
-    try { await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}/status`), 'rejected'); }
-    catch (err) { Alert.alert('Error', err.message); }
+    try {
+      await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}`), null);
+      setRequests(prev => prev.filter(r => !(r.id === otherUid && r.direction === 'incoming')));
+      showMsg('Rejected', 'Friend request rejected');
+    }
+    catch (err) { showMsg('Error', err.message || 'Reject failed'); }
   };
 
   const cancel = async (otherUid) => {
     try { await set(ref(realtimeDb, `FriendRequests/${currentUid}/${otherUid}`), null); }
-    catch (err) { Alert.alert('Error', err.message); }
+    catch (err) { showMsg('Error', err.message); }
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#f57c00" /></View>;
@@ -101,8 +115,8 @@ export default function FriendRequestsScreen() {
             </View>
             {item.direction === 'incoming' ? (
               <View style={styles.actions}>
-                <TouchableOpacity style={styles.acceptBtn} onPress={() => accept(item.id, item)}>
-                  <Icon name="check" size={20} color="#fff" />
+                <TouchableOpacity style={[styles.acceptBtn, acceptingId === item.id && { opacity: 0.5 }]} onPress={() => accept(item.id, item)} disabled={acceptingId === item.id}>
+                  <Icon name={acceptingId === item.id ? "clock" : "check"} size={20} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.rejectBtn} onPress={() => reject(item.id)}>
                   <Icon name="close" size={20} color="#fff" />

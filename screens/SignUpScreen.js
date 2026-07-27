@@ -37,7 +37,13 @@ export default function SignUpScreen({ navigation }) {
         search: email.split('@')[0].toLowerCase(),
         status: 'online',
         bio: '',
-        imageURL: 'default'
+        imageURL: 'default',
+        country: '',
+        age: '',
+        gender: '',
+        englishLevel: '',
+        interests: '',
+        profileImage: '',
       });
     } catch (err) {
       setErrorMsg(err.message);

@@ -6,6 +6,20 @@ import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 
 const AVATAR_COLORS = ['#f57c00', '#e91e63', '#9c27b0', '#3f51b5', '#009688', '#4caf50', '#ff5722', '#795348'];
 
+function formatLastSeen(timestamp) {
+  if (!timestamp) return '';
+  const now = Date.now();
+  const diff = now - parseInt(timestamp);
+  const mins = Math.floor(diff / 60000);
+  const hrs = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hrs < 24) return `${hrs}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return new Date(parseInt(timestamp)).toLocaleDateString();
+}
+
 function getAvatarColor(name) {
   let hash = 0;
   for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -94,6 +108,11 @@ export default function SearchScreen({ navigation }) {
     }
   };
 
+  const showMsg = (title, msg) => {
+    try { Alert.alert(title, msg); } catch (_) {}
+    try { window.alert(`${title}: ${msg}`); } catch (_) {}
+  };
+
   const acceptRequest = async (otherUid) => {
     try {
       const otherUser = allUsers.find(u => u.id === otherUid);
@@ -102,37 +121,41 @@ export default function SearchScreen({ navigation }) {
 
       await set(ref(realtimeDb, `Friends/${currentUid}/${otherUid}`), { id: otherUid, username: otherUser?.username || '', useremail: otherUser?.useremail || '' });
       await set(ref(realtimeDb, `Friends/${otherUid}/${currentUid}`), { id: currentUid, username: currentData.username || '', useremail: currentData.useremail || '' });
-      await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}/status`), 'accepted');
-      Alert.alert('Accepted', 'You are now friends.');
+      await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}`), null);
+      setIncomingRequests(prev => { const n = { ...prev }; delete n[otherUid]; return n; });
+      showMsg('Accepted', 'You are now friends.');
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showMsg('Error', (err && err.message) || 'Accept failed');
     }
   };
 
   const rejectRequest = async (otherUid) => {
     try {
-      await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}/status`), 'rejected');
-      Alert.alert('Rejected', 'Friend request rejected.');
+      await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}`), null);
+      setIncomingRequests(prev => { const n = { ...prev }; delete n[otherUid]; return n; });
+      showMsg('Rejected', 'Friend request rejected.');
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showMsg('Error', err.message || 'Reject failed');
     }
   };
 
   const removeFriend = async (otherUid) => {
-    Alert.alert('Remove Friend', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => {
-        try {
-          await set(ref(realtimeDb, `Friends/${currentUid}/${otherUid}`), null);
-          await set(ref(realtimeDb, `Friends/${otherUid}/${currentUid}`), null);
-        } catch (err) {
-          Alert.alert('Error', err.message);
-        }
-      }},
-    ]);
+    const confirmed = window.confirm ? window.confirm('Remove friend?') : true;
+    if (!confirmed) return;
+    try {
+      await set(ref(realtimeDb, `Friends/${currentUid}/${otherUid}`), null);
+      await set(ref(realtimeDb, `Friends/${otherUid}/${currentUid}`), null);
+      setFriends(prev => { const n = { ...prev }; delete n[otherUid]; return n; });
+    } catch (err) {
+      showMsg('Error', err.message || 'Remove failed');
+    }
   };
 
   const startChat = (otherUid) => {
+    if (!friends[otherUid]) {
+      showMsg('Not Friends', 'Add as friend first to start chatting.');
+      return;
+    }
     const user = allUsers.find(u => u.id === otherUid);
     const roomName = user?.username || user?.useremail || otherUid;
     navigation.navigate('Chat', { roomId: otherUid, roomName });
@@ -154,14 +177,24 @@ export default function SearchScreen({ navigation }) {
 
     return (
       <View style={styles.userItem}>
-        <TouchableOpacity style={styles.userInfoTouch} onPress={() => startChat(item.id)} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.userInfoTouch}
+          onPress={() => {
+            if (isFriend) startChat(item.id);
+            else if (hasIncoming) acceptRequest(item.id);
+            else if (!hasSentRequest) sendFriendRequest(item.id);
+          }}
+          activeOpacity={0.7}
+        >
           <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.username || item.useremail) }]}>
             <Text style={styles.avatarText}>{(item.username || item.useremail || '?').charAt(0).toUpperCase()}</Text>
             <View style={[styles.statusDot, { backgroundColor: item.status === 'online' ? '#4CAF50' : '#555' }]} />
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{item.username || 'Unknown'}</Text>
-            <Text style={styles.userEmail}>{item.useremail || ''}</Text>
+            <Text style={styles.userEmail}>
+              {item.status === 'online' ? 'Online' : item.lastSeen ? `Last seen ${formatLastSeen(item.lastSeen)}` : item.country || item.useremail || ''}
+            </Text>
           </View>
         </TouchableOpacity>
 
