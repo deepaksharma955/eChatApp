@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
 import { api } from '../api';
 import { startRecording, stopRecording, isRecordingSupported } from '../utils/audioRecorder';
 
@@ -59,6 +60,8 @@ export default function PronunciationScreen() {
       u.lang = 'en-US';
       u.rate = 0.8;
       window.speechSynthesis.speak(u);
+    } else {
+      Speech.speak(text, { language: 'en-US', rate: 0.8 });
     }
   };
 

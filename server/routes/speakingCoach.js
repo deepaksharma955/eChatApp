@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { callAI } = require('../utils/aiHelper');
+const { callAI, extractJSON } = require('../utils/aiHelper');
 
 const TOPICS = [
   'Introduce yourself and talk about your hobbies',
@@ -59,7 +59,7 @@ Return JSON only with this structure:
       });
     }
 
-    const parsed = JSON.parse(result);
+    const parsed = extractJSON(result);
     res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message });

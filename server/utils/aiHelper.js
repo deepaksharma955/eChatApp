@@ -99,4 +99,9 @@ async function callAIChat(messages, options = {}) {
   return null;
 }
 
-module.exports = { callAI, callAIChat };
+function extractJSON(raw) {
+  const cleaned = raw.replace(/```(?:json)?\s*/gi, '').replace(/\s*```/g, '').trim();
+  return JSON.parse(cleaned);
+}
+
+module.exports = { callAI, callAIChat, extractJSON };

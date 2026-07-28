@@ -23,7 +23,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "8d2deb87-ea3c-46a7-b3df-00adb8fa80e2"
+        "projectId": "36d5d9ac-36b2-4c13-a872-b3c606294045"
       }
     },
     "plugins": [
@@ -35,6 +35,7 @@
           }
         }
       ]
-    ]
+    ],
+    "owner": "genlogixpert"
   }
 }

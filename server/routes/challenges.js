@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { callAI } = require('../utils/aiHelper');
+const { callAI, extractJSON } = require('../utils/aiHelper');
 
 const CHALLENGE_TYPES = ['writing', 'speaking', 'vocabulary', 'grammar', 'comprehension'];
 
@@ -36,7 +36,7 @@ Return JSON only with this structure:
       return res.json(c);
     }
 
-    const parsed = JSON.parse(result);
+    const parsed = extractJSON(result);
     res.json(parsed);
   } catch (e) {
     const c = FALLBACK_CHALLENGES[challengeIndex % FALLBACK_CHALLENGES.length];
@@ -73,7 +73,7 @@ Return JSON only with this structure:
       });
     }
 
-    const parsed = JSON.parse(result);
+    const parsed = extractJSON(result);
     res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message });

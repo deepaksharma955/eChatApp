@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { callAI } = require('../utils/aiHelper');
+const { callAI, extractJSON } = require('../utils/aiHelper');
 
 const LANGUAGES = [
   { code: 'es', name: 'Spanish' }, { code: 'fr', name: 'French' }, { code: 'de', name: 'German' },
@@ -46,7 +46,7 @@ Return JSON only with this structure:
       });
     }
 
-    const parsed = JSON.parse(result);
+    const parsed = extractJSON(result);
     res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message, translated: req.body.text, from: req.body.from || 'auto', to: req.body.to, sourceText: req.body.text });

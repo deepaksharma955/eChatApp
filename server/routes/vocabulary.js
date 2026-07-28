@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { callAI } = require('../utils/aiHelper');
+const { callAI, extractJSON } = require('../utils/aiHelper');
 
 const FALLBACK_WORDS = [
   { word: 'Ephemeral', definition: 'Lasting for a very short time', pronunciation: '/ɪˈfem.ər.əl/', example: 'The beauty of cherry blossoms is ephemeral.', synonyms: ['brief', 'transient', 'fleeting'], partOfSpeech: 'adjective' },
@@ -35,7 +35,7 @@ Return JSON only with this structure:
       return res.json(word);
     }
 
-    const parsed = JSON.parse(result);
+    const parsed = extractJSON(result);
     res.json(parsed);
   } catch (e) {
     const word = FALLBACK_WORDS[wordIndex % FALLBACK_WORDS.length];
@@ -67,7 +67,7 @@ Return JSON only:
       });
     }
 
-    const parsed = JSON.parse(result);
+    const parsed = extractJSON(result);
     res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message });

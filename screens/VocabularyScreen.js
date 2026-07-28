@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
 import { api } from '../api';
 
 export default function VocabularyScreen() {
@@ -45,11 +46,13 @@ export default function VocabularyScreen() {
   };
 
   const speakWord = () => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
+    if (Platform.OS === 'web' && window.speechSynthesis) {
       const u = new SpeechSynthesisUtterance(wordData.word);
       u.lang = 'en-US';
       u.rate = 0.7;
       window.speechSynthesis.speak(u);
+    } else {
+      Speech.speak(wordData.word, { language: 'en-US', rate: 0.7 });
     }
   };
 
