@@ -98,7 +98,7 @@ export default function HomeScreen({ navigation }) {
         gSnap.forEach((childSnap) => {
           const d = childSnap.val();
           if (d.members && d.members[currentUid]) {
-            items.push({ id: childSnap.key, name: d.name || 'Group', sub: 'Group', type: 'group' });
+            items.push({ id: childSnap.key, name: d.name || 'Group', sub: d.description || `${Object.keys(d.members || {}).length} members`, type: 'group' });
           }
         });
       }
