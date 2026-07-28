@@ -1,13 +1,17 @@
 import { Platform } from 'react-native';
 
-const SERVER_PORT = 3001;
+const LIVE_URL = 'https://echatapp-production-fe62.up.railway.app';
+const DEV_PORT = 3001;
 const TIMEOUT = 15000;
 
 const getBaseUrl = () => {
-  if (Platform.OS === 'web') return `http://localhost:${SERVER_PORT}`;
-  if (Platform.OS === 'android') return `http://10.0.2.2:${SERVER_PORT}`;
-  if (Platform.OS === 'ios') return `http://localhost:${SERVER_PORT}`;
-  return `http://localhost:${SERVER_PORT}`;
+  if (__DEV__) {
+    if (Platform.OS === 'web') return `http://localhost:${DEV_PORT}`;
+    if (Platform.OS === 'android') return `http://10.0.2.2:${DEV_PORT}`;
+    if (Platform.OS === 'ios') return `http://localhost:${DEV_PORT}`;
+    return `http://localhost:${DEV_PORT}`;
+  }
+  return LIVE_URL;
 };
 
 export const API_BASE = getBaseUrl();
