@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-const LIVE_URL = 'https://echatapp-production-fe62.up.railway.app';
+const LIVE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://echatapp-production-fe62.up.railway.app';
 const DEV_PORT = 3001;
 const TIMEOUT = 15000;
 

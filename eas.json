@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 3.8.1"
+    "version": ">= 3.8.1",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -12,7 +13,11 @@
         "buildType": "apk"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://echatapp-production-fe62.up.railway.app"
+      }
+    }
   },
   "submit": {
     "production": {}
