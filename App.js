@@ -1,4 +1,3 @@
-import 'react-native-gesture-handler';
 import React, { useState, createContext, useContext, useEffect, useRef } from 'react';
 import { NavigationContainer, CommonActions } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -67,20 +66,22 @@ function CustomDrawerContent(props) {
   };
 
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={{flex: 1, backgroundColor: '#1A1A1A'}}>
-      <View style={styles.drawerHeader}>
-        <View style={styles.drawerAvatar}>
-          <Icon name="account" size={40} color="#fff" />
+    <DrawerContentScrollView {...props} contentContainerStyle={{flexGrow: 1, backgroundColor: '#1A1A1A'}}>
+      <View style={{flex: 1}}>
+        <View style={styles.drawerHeader}>
+          <View style={styles.drawerAvatar}>
+            <Icon name="account" size={40} color="#fff" />
+          </View>
+          <Text style={styles.drawerUserName}>{auth?.currentUser?.email?.split('@')[0] || 'User'}</Text>
+          <Text style={styles.drawerUserEmail}>{auth?.currentUser?.email || ''}</Text>
         </View>
-        <Text style={styles.drawerUserName}>{auth?.currentUser?.email?.split('@')[0] || 'User'}</Text>
-        <Text style={styles.drawerUserEmail}>{auth?.currentUser?.email || ''}</Text>
+        <View style={styles.drawerDivider} />
+        <DrawerItemList {...props} />
+        <TouchableOpacity style={styles.drawerCustomItem} onPress={goToAdmin}>
+          <Icon name="shield-account" color="#f57c00" size={22} style={{ width: 40, textAlign: 'center' }} />
+          <Text style={styles.drawerCustomLabel}>Admin Panel</Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.drawerDivider} />
-      <DrawerItemList {...props} />
-      <TouchableOpacity style={styles.drawerCustomItem} onPress={goToAdmin}>
-        <Icon name="shield-account" color="#f57c00" size={22} style={{ width: 40, textAlign: 'center' }} />
-        <Text style={styles.drawerCustomLabel}>Admin Panel</Text>
-      </TouchableOpacity>
       <View style={styles.drawerBottom}>
         <DrawerItem 
           label="Logout" 
@@ -358,8 +359,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   drawerBottom: {
-    flex: 1,
-    justifyContent: 'flex-end',
     marginBottom: 20,
     borderTopWidth: 1,
     borderTopColor: '#2C2C2C',
