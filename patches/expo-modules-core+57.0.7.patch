@@ -1,0 +1,52 @@
+diff --git a/android/src/main/java/expo/modules/adapters/react/services/UIManagerModuleWrapper.java b/android/src/main/java/expo/modules/adapters/react/services/UIManagerModuleWrapper.java
+index 12121f978bd7c8549e87974a141c2a39c8af8a5e..f9e6412e63ec8cbb23227de593a5de43d3dce0a6 100644
+--- a/android/src/main/java/expo/modules/adapters/react/services/UIManagerModuleWrapper.java
++++ b/android/src/main/java/expo/modules/adapters/react/services/UIManagerModuleWrapper.java
+@@ -1,9 +1,12 @@
+ package expo.modules.adapters.react.services;
+ 
+ import android.app.Activity;
+ import android.content.Intent;
++import android.view.View;
+ 
+ import com.facebook.react.bridge.ReactContext;
+ import com.facebook.react.common.annotations.FrameworkAPI;
+ import com.facebook.react.common.annotations.UnstableReactNativeAPI;
+ import com.facebook.react.turbomodule.core.CallInvokerHolderImpl;
++import com.facebook.react.uimanager.UIManagerHelper;
++import com.facebook.react.uimanager.common.UIManagerType;
+ 
+ import java.lang.ref.WeakReference;
+@@ -153,6 +156,13 @@ public class UIManagerModuleWrapper implements
+     getContext().removeActivityEventListener(mActivityEventListenersMap.get(activityEventListener));
+   }
+ 
++  @Override
++  public View resolveView(int viewTag) {
++    return UIManagerHelper
++      .getUIManagerForReactTag(mReactContext, viewTag)
++      .resolveView(viewTag);
++  }
++
+   public long getJavaScriptContextRef() {
+     return mReactContext.getJavaScriptContextHolder().get();
+   }
+diff --git a/android/src/main/java/expo/modules/core/interfaces/services/UIManager.java b/android/src/main/java/expo/modules/core/interfaces/services/UIManager.java
+index 661e6b686440db6e2aee87e797fa7b38ad5a3d5a..e33d8e5839de10f0b9fe854e6dee31bb5f43dd05 100644
+--- a/android/src/main/java/expo/modules/core/interfaces/services/UIManager.java
++++ b/android/src/main/java/expo/modules/core/interfaces/services/UIManager.java
+@@ -1,4 +1,6 @@
+ package expo.modules.core.interfaces.services;
+ 
++import android.view.View;
++
+ import expo.modules.core.interfaces.ActivityEventListener;
+ import expo.modules.core.interfaces.LifecycleEventListener;
+ 
+@@ -16,4 +18,6 @@ public interface UIManager {
+   void registerActivityEventListener(ActivityEventListener activityEventListener);
+ 
+   void unregisterActivityEventListener(ActivityEventListener activityEventListener);
++
++  View resolveView(int viewTag);
+ }
