@@ -44,8 +44,8 @@ import com.facebook.react.uimanager.common.UIManagerType;`
     'import android.app.Activity;\nimport android.view.View;'
   );
   content = content.replace(
-    'public void unregisterActivityEventListener(final ActivityEventListener activityEventListener) {',
-    `@Override
+    '  @Override\n  public void unregisterActivityEventListener(final ActivityEventListener activityEventListener) {',
+    `  @Override
   public View resolveView(int viewTag) {
     return UIManagerHelper
       .getUIManagerForReactTag(mReactContext, viewTag)
