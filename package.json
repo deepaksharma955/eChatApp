@@ -5,9 +5,7 @@
   "expo": {
     "autolinking": {
       "android": {
-        "buildFromSource": [
-          "expo-av"
-        ]
+        "buildFromSource": []
       }
     }
   },
