@@ -13,6 +13,12 @@ const uiManagerWrapperFile = path.join(
   'adapters', 'react', 'services', 'UIManagerModuleWrapper.java'
 );
 
+const fullscreenVideoPlayerFile = path.join(
+  __dirname, '..', 'node_modules', 'expo-av',
+  'android', 'src', 'main', 'java', 'expo', 'modules', 'av',
+  'video', 'FullscreenVideoPlayer.java'
+);
+
 // Patch 1: Add resolveView to UIManager interface
 let content = fs.readFileSync(uiManagerFile, 'utf8');
 if (!content.includes('resolveView')) {
@@ -59,4 +65,40 @@ import com.facebook.react.uimanager.common.UIManagerType;`
   console.log('Patched UIManagerModuleWrapper.java');
 } else {
   console.log('UIManagerModuleWrapper.java already patched');
+}
+
+// Patch 3: Fix FullscreenVideoPlayer.java - KeepAwakeManager was removed in SDK 57
+content = fs.readFileSync(fullscreenVideoPlayerFile, 'utf8');
+if (!content.includes('// patched: removed KeepAwakeManager')) {
+  // Remove KeepAwakeManager import (removed from expo-modules-core in SDK 57)
+  content = content.replace(
+    "import expo.modules.core.interfaces.services.KeepAwakeManager;\n",
+    ""
+  );
+  // Remove unused ModuleRegistry import since KeepAwakeManager was the only usage
+  content = content.replace(
+    "import expo.modules.core.ModuleRegistry;\n",
+    ""
+  );
+  // Remove KeepAwakeManager usage - both branches did addFlags(FLAG_KEEP_SCREEN_ON) anyway
+  content = content.replace(
+    `          AppContext appContext = fullscreenVideoPlayer.mAppContext.get();
+          ModuleRegistry moduleRegistry = appContext != null ? appContext.getLegacyModuleRegistry() : null;
+          if (moduleRegistry != null) {
+            KeepAwakeManager keepAwakeManager = moduleRegistry.getModule(KeepAwakeManager.class);
+            boolean keepAwakeIsActivated = keepAwakeManager != null && keepAwakeManager.isActivated();
+            if (isPlaying || keepAwakeIsActivated) {
+              window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } else {
+              window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
+          }`,
+    `          if (isPlaying) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+          }`
+  );
+  fs.writeFileSync(fullscreenVideoPlayerFile, content);
+  console.log('Patched FullscreenVideoPlayer.java');
+} else {
+  console.log('FullscreenVideoPlayer.java already patched');
 }
