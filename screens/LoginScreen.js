@@ -1,8 +1,48 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { useGoogleAuth, isGoogleAuthConfigured } from '../utils/useGoogleAuth';
+
+function GoogleSignInButton({ onNavigate }) {
+  const { signInWithGoogle, loading: googleLoading, error: googleError, request } = useGoogleAuth();
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const onGoogleLogin = () => {
+    setErrorMsg('');
+    if (!request) {
+      setErrorMsg('Google sign-in is not configured yet.');
+      return;
+    }
+    signInWithGoogle();
+  };
+
+  return (
+    <>
+      {errorMsg ? (
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle" size={18} color="#fff" />
+          <Text style={styles.errorText}>{errorMsg}</Text>
+        </View>
+      ) : googleError ? (
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle" size={18} color="#fff" />
+          <Text style={styles.errorText}>{googleError}</Text>
+        </View>
+      ) : null}
+
+      <TouchableOpacity style={styles.googleButton} onPress={onGoogleLogin} activeOpacity={0.8} disabled={googleLoading}>
+        {googleLoading ? (
+          <ActivityIndicator size="small" color="#1E1E1E" />
+        ) : (
+          <Icon name="google" size={22} color="#1E1E1E" />
+        )}
+        <Text style={styles.googleButtonText}>{googleLoading ? 'Signing in...' : 'Continue with Google'}</Text>
+      </TouchableOpacity>
+    </>
+  );
+}
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -24,8 +64,8 @@ export default function LoginScreen({ navigation }) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
-        <Image source={require('../assets/eChatlogo.png')} style={{ width: 80, height: 80, marginBottom: 8 }} resizeMode="contain" />
-        <Text style={styles.appName}>eChat</Text>
+        <Image source={require('../assets/ediscusslogo.png')} style={{ width: 80, height: 80, marginBottom: 8 }} resizeMode="contain" />
+        <Text style={styles.appName}>eDiscuss</Text>
       </View>
 
       <Text style={styles.title}>Welcome Back</Text>
@@ -77,6 +117,17 @@ export default function LoginScreen({ navigation }) {
       <TouchableOpacity style={styles.button} onPress={onHandleLogin} activeOpacity={0.8}>
         <Text style={styles.buttonText}>Log In</Text>
       </TouchableOpacity>
+
+      {isGoogleAuthConfigured && (
+        <>
+          <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.orLine} />
+          </View>
+          <GoogleSignInButton />
+        </>
+      )}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Don't have an account? </Text>
@@ -181,6 +232,36 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     letterSpacing: 0.5,
+  },
+  orRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#3A3A3A',
+  },
+  orText: {
+    color: '#888',
+    fontSize: 13,
+    marginHorizontal: 12,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#fff',
+    height: 54,
+    borderRadius: 14,
+  },
+  googleButtonText: {
+    color: '#1E1E1E',
+    fontWeight: '700',
+    fontSize: 16,
   },
   footer: {
     flexDirection: 'row',
