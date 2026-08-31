@@ -270,6 +270,31 @@ function RootNavigator() {
   const [skippedUpdate, setSkippedUpdate] = useState(false);
   const notificationResponseListener = useRef(null);
 
+  const navigateFromNotification = (data) => {
+    if (!data || !navRef.current) return;
+
+    if (data.chatId) {
+      const isGroup = data.isGroup === true || data.isGroup === 'true';
+      if (isGroup) {
+        navRef.current.navigate('GroupChat', { groupId: data.chatId });
+      } else {
+        navRef.current.navigate('Chat', { roomId: data.chatId, roomName: data.senderName || 'Chat' });
+      }
+      return;
+    }
+
+    const screen = data.screen;
+    if (screen === 'Vocabulary') {
+      navRef.current.navigate('Vocabulary', { dailyWord: data.word });
+    } else if (screen === 'Challenges') {
+      navRef.current.navigate('Challenges');
+    } else if (screen === 'Progress') {
+      navRef.current.navigate('Progress');
+    } else if (screen === 'Home' || screen === 'Admin') {
+      navRef.current.navigate(screen);
+    }
+  };
+
   useEffect(() => {
     checkForUpdate().then((res) => {
       if (res) setAppUpdate(res);
@@ -363,26 +388,18 @@ function RootNavigator() {
     notificationResponseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
       if (!navRef.current) return;
+      navigateFromNotification(data);
+    });
 
-      if (data?.chatId) {
-        const isGroup = data.isGroup === true || data.isGroup === 'true';
-        if (isGroup) {
-          navRef.current.navigate('GroupChat', { groupId: data.chatId });
-        } else {
-          navRef.current.navigate('Chat', { roomId: data.chatId, roomName: data.senderName || 'Chat' });
-        }
-        return;
-      }
-
-      const screen = data?.screen;
-      if (screen === 'Vocabulary') {
-        navRef.current.navigate('Vocabulary', { dailyWord: data.word });
-      } else if (screen === 'Challenges') {
-        navRef.current.navigate('Challenges');
-      } else if (screen === 'Progress') {
-        navRef.current.navigate('Progress');
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        const data = response.notification.request.content.data;
+        setTimeout(() => {
+          if (navRef.current) navigateFromNotification(data);
+        }, 1000);
       }
     });
+
     return () => {
       if (notificationResponseListener.current) {
         notificationResponseListener.current.remove();
