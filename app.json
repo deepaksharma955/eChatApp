@@ -26,6 +26,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.deepaksharma955.echatapp",
+      "versionCode": 4,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
