@@ -20,6 +20,13 @@ export default function VoiceChatScreen() {
   const callIdRef = useRef(null);
 
   useEffect(() => {
+    return () => {
+      if (pcRef.current) pcRef.current.close();
+      if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  useEffect(() => {
     if (!currentUid) return;
     const friendsRef = ref(realtimeDb, `Users/${currentUid}/friends`);
     const handleFriends = async (snap) => {
@@ -163,6 +170,15 @@ export default function VoiceChatScreen() {
     setIsCalling(false);
     setCallPartner(null);
     setCallStatus('');
+    setMuted(false);
+  };
+
+  const toggleMute = () => {
+    const newMuted = !muted;
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = newMuted; });
+    }
+    setMuted(newMuted);
   };
 
   const rejectCall = () => {
@@ -191,7 +207,7 @@ export default function VoiceChatScreen() {
           <Text style={styles.callStatus}>{callStatus}</Text>
         </View>
         <View style={styles.callControls}>
-          <TouchableOpacity style={styles.muteBtn} onPress={() => setMuted(!muted)}>
+          <TouchableOpacity style={styles.muteBtn} onPress={toggleMute}>
             <Icon name={muted ? 'microphone-off' : 'microphone'} size={28} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.endCallBtn} onPress={endCall}>

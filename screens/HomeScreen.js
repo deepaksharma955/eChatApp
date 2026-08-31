@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, AppState } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, AppState, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { auth, realtimeDb } from '../firebase';
 import { ref, onValue, off, get } from 'firebase/database';
@@ -33,6 +33,7 @@ function getAvatarColor(name) {
 export default function HomeScreen({ navigation }) {
   const [chatItems, setChatItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const currentUid = auth.currentUser?.uid;
   const prevStatusRef = useRef({});
@@ -238,6 +239,7 @@ export default function HomeScreen({ navigation }) {
           keyExtractor={item => item.id + (item.type || '')}
           renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 40 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000); }} tintColor="#f57c00" colors={['#f57c00']} />}
           ListHeaderComponent={
             onlineCount > 0 ? (
               <View style={styles.onlineHeader}>

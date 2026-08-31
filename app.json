@@ -1,12 +1,16 @@
 {
   "expo": {
-    "name": "eChat",
-    "slug": "EchatApp",
-    "version": "1.0.0",
+    "name": "eDiscuss",
+    "slug": "ediscuss",
+    "scheme": [
+      "com.deepaksharma955.echatapp",
+      "ediscuss"
+    ],
+    "version": "1.0.2",
     "orientation": "portrait",
-    "icon": "./assets/eChatlogo.png",
+    "icon": "./assets/app-icon.png",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/ediscusslogo.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -17,19 +21,23 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/adaptive-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.deepaksharma955.echatapp"
+      "package": "com.deepaksharma955.echatapp",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
-      "favicon": "./assets/eChatlogo.png",
+      "favicon": "./assets/ediscusslogo.png",
       "bundler": "metro"
     },
     "extra": {
       "eas": {
-        "projectId": "36d5d9ac-36b2-4c13-a872-b3c606294045"
+        "projectId": "6f4e3a6d-cc76-436a-a455-e646e2bde22c"
       }
     },
     "plugins": [
@@ -40,8 +48,32 @@
             "usesCleartextTraffic": true
           }
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/ediscusslogo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      "expo-sharing",
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera for reading practice videos",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone for reading practice",
+          "recordAudioAndroid": true
+        }
       ]
     ],
-    "owner": "genlogixpert"
+    "owner": "ediscuss0s-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6f4e3a6d-cc76-436a-a455-e646e2bde22c"
+    }
   }
 }
