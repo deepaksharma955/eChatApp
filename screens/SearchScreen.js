@@ -42,7 +42,7 @@ export default function SearchScreen({ navigation }) {
       const usersRef = ref(realtimeDb, 'Users');
       const friendsRef = ref(realtimeDb, `Friends/${currentUid}`);
       const sentRef = ref(realtimeDb, `FriendRequests/${currentUid}`);
-      const inRef = ref(realtimeDb, `FriendRequests`);
+      const inRef = ref(realtimeDb, `IncomingFriendRequests/${currentUid}`);
 
       onValue(usersRef, (snap) => {
         const users = [];
@@ -71,11 +71,10 @@ export default function SearchScreen({ navigation }) {
         if (snap.exists()) {
           snap.forEach((senderChild) => {
             const senderUid = senderChild.key;
-            senderChild.forEach((req) => {
-              if (req.val().to === currentUid && req.val().status === 'pending') {
-                inc[senderUid] = req.val().status;
-              }
-            });
+            const data = senderChild.val();
+            if (data && data.status === 'pending') {
+              inc[senderUid] = data.status;
+            }
           });
         }
         setIncomingRequests(inc);
@@ -102,6 +101,12 @@ export default function SearchScreen({ navigation }) {
         status: 'pending',
         timestamp: Date.now().toString(),
       });
+      await set(ref(realtimeDb, `IncomingFriendRequests/${otherUid}/${currentUid}`), {
+        from: currentUid,
+        to: otherUid,
+        status: 'pending',
+        timestamp: Date.now().toString(),
+      });
       Alert.alert('Request Sent', 'Friend request has been sent.');
     } catch (err) {
       Alert.alert('Error', err.message);
@@ -122,6 +127,7 @@ export default function SearchScreen({ navigation }) {
       await set(ref(realtimeDb, `Friends/${currentUid}/${otherUid}`), { id: otherUid, username: otherUser?.username || '', useremail: otherUser?.useremail || '' });
       await set(ref(realtimeDb, `Friends/${otherUid}/${currentUid}`), { id: currentUid, username: currentData.username || '', useremail: currentData.useremail || '' });
       await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}`), null);
+      await set(ref(realtimeDb, `IncomingFriendRequests/${currentUid}/${otherUid}`), null);
       setIncomingRequests(prev => { const n = { ...prev }; delete n[otherUid]; return n; });
       showMsg('Accepted', 'You are now friends.');
     } catch (err) {
@@ -132,6 +138,7 @@ export default function SearchScreen({ navigation }) {
   const rejectRequest = async (otherUid) => {
     try {
       await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}`), null);
+      await set(ref(realtimeDb, `IncomingFriendRequests/${currentUid}/${otherUid}`), null);
       setIncomingRequests(prev => { const n = { ...prev }; delete n[otherUid]; return n; });
       showMsg('Rejected', 'Friend request rejected.');
     } catch (err) {

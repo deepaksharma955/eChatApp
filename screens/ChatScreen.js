@@ -1,14 +1,25 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { View, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Pressable, Modal, ScrollView, Image, TextInput, ActivityIndicator } from 'react-native';
 import { GiftedChat, Bubble, Send, InputToolbar, Day } from 'react-native-gifted-chat';
-import { ref, onValue, off, push, set, update, runTransaction, get } from 'firebase/database';
+import { ref, onValue, off, push, set, update, runTransaction, get, query, orderByChild, equalTo } from 'firebase/database';
 import { auth, realtimeDb } from '../firebase';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import { File, Directory, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as Clipboard from 'expo-clipboard';
 
 const showMsg = (title, msg) => {
   Alert.alert(title, msg);
   try { window.alert(msg); } catch (_) {}
 };
+
+const ActionRow = ({ icon, label, danger, onPress }) => (
+  <TouchableOpacity style={styles.actionRowBtn} onPress={onPress}>
+    <Icon name={icon} size={20} color={danger ? '#F44336' : '#fff'} style={{ marginRight: 12 }} />
+    <Text style={[styles.actionRowLabel, danger && { color: '#F44336' }]}>{label}</Text>
+  </TouchableOpacity>
+);
 
 const EMOJIS = ['😀','😃','😄','😁','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😗','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤔','🤐','😐','😑','😶','😏','😒','🙄','😬','🤥','😴','😮','🤤','😪','😵','🤯','😳','🥺','😟','😡','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','❤️','🧡','💛','💚','💙','💜','🖤','💔','💕','💞','💗','💖','💘','💝','💟','👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✌️','🤞','🤟','🤘','👌','💪','🖕','✋','🤚','🖐','👋','🤙','💅','🤳','💄','👶','🧒','👦','👧','🧑','👨','👩','🧓','👴','👵','👲','👳','👮','🕵️','💂','👷','🤴','👸','👰','🤵','🎅','🤶','🙇','💁','🙅','🙆','🙋','🤦','🤷','💆','💇','🚶','🏃','💃','🕺','👯','🧖','🧘','🛀','🛌','👭','👫','👬','💏','💑','👪','🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🐘','🦏','🐪','🐫','🦒','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🐐','🦌','🐕','🐩','🐈','🐓','🦃','🕊','🐇','🐁','🐀','🐿','🦔','🐾','🐉','🐲','🌵','🎄','🌲','🌳','🌴','🌱','🌿','☘️','🍀','🎍','🍃','🍂','🍁','🍄','🌺','🌻','🌹','🥀','🌷','🌼','🌸','💐','🌾','🌊','💧','💦','☔️','⛱','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌎','🌍','🌏','⭐️','🌟','✨','⚡️','☄️','💥','🔥','🌪','🌈','☀️','🌤','⛅️','🌥','☁️','🌦','🌧','⛈','🌩','🌨','❄️','☃️','⛄️','🌬','💨','💫','🎉','🎊','🎈','🎁','🎀','🎗','🏆','🏅','🥇','🥈','🥉','⚽️','🏀','🏈','⚾️','🎾','🏐','🏉','🎱','🏓','🏸','🥊','🥋','🎯','⛳️','🎣','🥏','🎠','🎡','🎢','🚂','🚃','🚄','🚅','🚇','🚌','🚍','🚎','🚐','🚑','🚒','🚓','🚔','🚕','🚖','🚗','🚘','🚙','🚚','🚛','🚜','🏎','🏍','🚲','🛴','🛵','🚏','🛤','🛣','⛽️','🚨','🚥','🚦','🛑','🚧','⚓️','⛵️','🛶','🚤','🛳','⛴','🚢','✈️','🛩','🛫','🛬','🚁','🚟','🚠','🚡','🛰','🚀','🛸','🏠','🏡','🏘','🏚','🏗','🏢','🏭','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏯','🏰','💒','🗼','🗽','⛪️','🕌','🕍','🕋','⛩','🛕','🕋','⛲️','⛺️','🌁','🌃','🏙','🌄','🌅','🌆','🌇','🌉','🗾','🏔','⛰','🌋','🗻','🏕','🏖','🏜','🏝','🏞','📱','💻','⌨️','🖥','🖨','🖱','🖲','🕹','🗜','💽','💾','💿','📀','📼','📷','📸','📹','🎥','📽','🎞','📞','☎️','📟','📠','📺','📻','🎙','🎚','🎛','🧭','⏱','⏲','⏰','🕰','⌛️','⏳','📡','🔋','🔌','💡','🔦','🕯','🗑','🛢','💸','💵','💴','💶','💷','💰','💳','💎','⚖️','🔧','🔩','⚙️','🗜','🔨','⛏','🪓','🔫','🏹','🛡','🔗','⛓','🧲','🔬','🔭','📡','💉','💊','🚬','⚰️','⚱️','🗿','🛎','🧸','🎈','🎏','🎀','🎁','🎊','🎉','🎎','🏮','🎐','🧧','✉️','📩','📨','📧','💌','📥','📤','📦','🏷','📪','📫','📬','📭','📮','📯','📜','📃','📄','📑','🧾','📊','📈','📉','🗒','🗓','📆','📅','📇','🗃','🗳','🗄','📋','📁','📂','🗂','🗞','📰','📓','📔','📒','📕','📗','📘','📙','📚','📖','🔖','🧷','🔗','📎','🖇','📐','📏','🧮','📌','📍','✂️','🖊','🖋','✒️','🖌','🖍','📝','✏️','🔍','🔎','🔏','🔐','🔒','🔓'];
 
@@ -62,6 +73,12 @@ export default function ChatScreen({ route, navigation }) {
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [userData, setUserData] = useState(null);
+  const [viewer, setViewer] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
+  const [actionMsg, setActionMsg] = useState(null);
+  const [forwardMsg, setForwardMsg] = useState(null);
+  const [forwardContacts, setForwardContacts] = useState([]);
+  const [forwardQuery, setForwardQuery] = useState('');
   const { roomId: otherUid, roomName } = route.params || {};
   const currentUid = auth.currentUser?.uid;
   const fileInputRef = useRef(null);
@@ -123,7 +140,6 @@ export default function ChatScreen({ route, navigation }) {
       return { ...data, id: otherUid, unreadCount: 0 };
     }).catch(() => {});
 
-    const chatsRef = ref(realtimeDb, 'Chats');
     const handleData = (snapshot) => {
       const msgs = [];
       const unseenKeys = [];
@@ -134,6 +150,7 @@ export default function ChatScreen({ route, navigation }) {
             (data.sender === currentUid && data.receiver === otherUid) ||
             (data.sender === otherUid && data.receiver === currentUid);
           if (isRelevant) {
+            if (data.deletedFor && data.deletedFor[currentUid]) return;
             if (data.sender === otherUid && data.receiver === currentUid && !data.isseen) {
               unseenKeys.push(childSnap.key);
             }
@@ -141,10 +158,17 @@ export default function ChatScreen({ route, navigation }) {
               _id: childSnap.key,
               text: data.message || '',
               createdAt: data.time ? new Date(parseInt(data.time)) : new Date(),
-              user: { _id: data.sender },
+              user: { _id: data.sender, name: data.senderName || '' },
             };
             if (data.deleted) {
               msg.deleted = true;
+            }
+            if (data.replyingTo) {
+              msg.replyingTo = data.replyingTo;
+            }
+            if (data.forwarded) {
+              msg.forwarded = true;
+              msg.forwardedFrom = data.forwardedFrom || '';
             }
             if (data.type === 'image' && !data.deleted) {
               msg.image = data.image;
@@ -174,8 +198,26 @@ export default function ChatScreen({ route, navigation }) {
       }
     };
 
-    onValue(chatsRef, handleData);
-    return () => off(chatsRef, 'value', handleData);
+    const outgoingQ = query(ref(realtimeDb, 'Chats'), orderByChild('sender'), equalTo(currentUid));
+    const incomingQ = query(ref(realtimeDb, 'Chats'), orderByChild('receiver'), equalTo(currentUid));
+    const merged = {};
+    let skipCount = 2;
+    const mergeSnapshot = () => {
+      if (skipCount > 0) { skipCount--; return; }
+      const combined = { exists: () => Object.keys(merged).length > 0, forEach: (cb) => { Object.entries(merged).forEach(([k, v]) => cb({ key: k, val: () => v, exists: () => true })); } };
+      handleData(combined);
+    };
+    const unsub1 = onValue(outgoingQ, (snap) => {
+      if (snap.exists()) snap.forEach((child) => { merged[child.key] = child.val(); });
+      else { Object.keys(merged).filter(k => merged[k]?.sender === currentUid).forEach(k => delete merged[k]); }
+      mergeSnapshot();
+    });
+    const unsub2 = onValue(incomingQ, (snap) => {
+      if (snap.exists()) snap.forEach((child) => { merged[child.key] = child.val(); });
+      else { Object.keys(merged).filter(k => merged[k]?.receiver === currentUid).forEach(k => delete merged[k]); }
+      mergeSnapshot();
+    });
+    return () => { unsub1(); unsub2(); };
   }, [currentUid, otherUid]);
 
   const sendMessage = useCallback(async (text, extra = {}) => {
@@ -189,6 +231,12 @@ export default function ChatScreen({ route, navigation }) {
     } catch (_) {}
     const senderName = auth.currentUser?.email?.split('@')[0] || 'User';
     const chatRef = push(ref(realtimeDb, 'Chats'));
+    const replyData = replyTo && replyTo.text
+      ? { replyingTo: {
+          senderName: replyTo.user?._id === currentUid ? 'You' : (userData?.username || userData?.useremail?.split('@')[0] || 'User'),
+          text: replyTo.text,
+        } }
+      : {};
     set(chatRef, {
       sender: currentUid,
       receiver: otherUid,
@@ -196,17 +244,19 @@ export default function ChatScreen({ route, navigation }) {
       message: text,
       time: Date.now().toString(),
       isseen: false,
+      ...replyData,
       ...extra,
     }).catch((err) => {
       console.error('Firebase write failed:', err);
     });
+    if (replyTo) setReplyTo(null);
     update(ref(realtimeDb, `Chatlist/${currentUid}/${otherUid}`), { id: otherUid }).catch(() => {});
     runTransaction(ref(realtimeDb, `Chatlist/${otherUid}/${currentUid}`), (data) => {
       if (!data) return { id: currentUid, unreadCount: 1 };
       return { ...data, id: currentUid, unreadCount: (data.unreadCount || 0) + 1 };
     }).catch(() => {});
     playSound('sent');
-  }, [currentUid, otherUid]);
+  }, [currentUid, otherUid, replyTo, userData]);
 
   const onSend = useCallback((newMessages = []) => {
     const msg = newMessages[0];
@@ -224,6 +274,11 @@ export default function ChatScreen({ route, navigation }) {
       fileName: null,
       fileType: null,
     }).catch((err) => console.error('Delete failed:', err));
+  };
+
+  const deleteForMe = (msgId) => {
+    update(ref(realtimeDb, `Chats/${msgId}/deletedFor/${currentUid}`), true)
+      .catch((err) => console.error('Delete failed:', err));
   };
 
   const reportMessage = (message) => {
@@ -264,25 +319,89 @@ export default function ChatScreen({ route, navigation }) {
   };
 
   const confirmDelete = (message) => {
+    setActionMsg(message);
+  };
+
+  const closeActions = () => setActionMsg(null);
+
+  const handleLongPress = (context, message) => {
+    if (!message) return;
+    confirmDelete(message);
+  };
+
+  const copyMessage = (message) => {
+    const textToCopy = message.text || '';
     try {
-      Alert.alert('Message', '', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteMessage(message._id) },
-        { text: 'Report', onPress: () => reportMessage(message) },
-      ]);
+      if (Platform.OS === 'web' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          try { Alert.alert('Copied', 'Message copied to clipboard.'); } catch (_) { window.alert('Message copied to clipboard.'); }
+        });
+      } else if (Clipboard.setStringAsync) {
+        Clipboard.setStringAsync(textToCopy).then(() => {
+          try { Alert.alert('Copied', 'Message copied to clipboard.'); } catch (_) {}
+        });
+      } else {
+        try { Alert.alert('Copied', 'Message copied to clipboard.'); } catch (_) {}
+      }
     } catch (_) {
-      const action = window.confirm('Delete this message?');
-      if (action) deleteMessage(message._id);
-      else reportMessage(message);
+      try { Alert.alert('Copied', 'Message copied to clipboard.'); } catch (_) {}
     }
   };
 
-  const handleLongPress = (context, message) => {
-    if (message?.user?._id === currentUid) {
-      confirmDelete(message);
-    } else {
-      reportMessage(message);
+  const startReply = (message) => {
+    setReplyTo(message);
+  };
+
+  const cancelReply = () => setReplyTo(null);
+
+  const openForward = async (message) => {
+    setForwardMsg(message);
+    try {
+      const snap = await get(ref(realtimeDb, `Chatlist/${currentUid}`));
+      const contacts = [];
+      if (snap.exists()) {
+        snap.forEach((child) => {
+          contacts.push({ id: child.key });
+        });
+      }
+      const withNames = await Promise.all(contacts.map(async (c) => {
+        try {
+          const u = await get(ref(realtimeDb, `Users/${c.id}`));
+          const v = u.val();
+          return { ...c, name: (v?.username || v?.useremail?.split('@')[0] || c.id) };
+        } catch {
+          return { ...c, name: c.id };
+        }
+      }));
+      setForwardContacts(withNames);
+    } catch (_) {}
+  };
+
+  const forwardTo = async (recipientUid, message) => {
+    try {
+      const senderName = auth.currentUser?.email?.split('@')[0] || 'User';
+      const chatRef = push(ref(realtimeDb, 'Chats'));
+      await set(chatRef, {
+        sender: currentUid,
+        receiver: recipientUid,
+        senderName: senderName,
+        message: message.text || '',
+        time: Date.now().toString(),
+        isseen: false,
+        forwarded: true,
+        forwardedFrom: message.user?._id === currentUid ? '' : (message.user?.name || ''),
+      });
+      update(ref(realtimeDb, `Chatlist/${currentUid}/${recipientUid}`), { id: recipientUid }).catch(() => {});
+      runTransaction(ref(realtimeDb, `Chatlist/${recipientUid}/${currentUid}`), (data) => {
+        if (!data) return { id: currentUid, unreadCount: 1 };
+        return { ...data, id: currentUid, unreadCount: (data.unreadCount || 0) + 1 };
+      }).catch(() => {});
+      try { Alert.alert('Forwarded', 'Message forwarded.'); } catch (_) { window.alert('Message forwarded.'); }
+    } catch (err) {
+      console.error('Forward failed:', err);
     }
+    setForwardMsg(null);
+    setForwardQuery('');
   };
 
   const insertEmoji = (emoji) => {
@@ -301,29 +420,135 @@ export default function ChatScreen({ route, navigation }) {
 
   // typing indicator removed for stability
 
-  const pickFile = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,.pdf,.doc,.docx,.txt,.zip';
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (file.size > 7 * 1024 * 1024) {
+  const getBase64Data = (dataUrl) => (dataUrl && dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl);
+
+  const getDataUrlMeta = (dataUrl) => {
+    const match = /^data:([^;,]+)/.exec(dataUrl || '');
+    return match ? match[1] : 'image/jpeg';
+  };
+
+  const sanitizeFileName = (name) => {
+    const base = String(name || 'file').replace(/[\\/:*?"<>|]+/g, '_').trim();
+    return base || 'file';
+  };
+
+  const writeToCache = async (file) => {
+    const dir = new Directory(Paths.cache, 'received-files');
+    dir.create({ intermediates: true, idempotent: true });
+    const target = new File(dir, sanitizeFileName(file.name));
+    target.write(getBase64Data(file.data), { encoding: 'base64' });
+    return target;
+  };
+
+  const shareNativeFile = async (file) => {
+    const target = await writeToCache(file);
+    const available = await Sharing.isAvailableAsync();
+    if (!available) {
+      try { Alert.alert('Not available', 'File sharing is not available on this device.'); } catch (_) {}
+      return;
+    }
+    await Sharing.shareAsync(target.uri, {
+      mimeType: file.mimeType || 'application/octet-stream',
+      dialogTitle: file.name || 'File',
+    });
+  };
+
+  const downloadOnWeb = (dataUrl, name) => {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = name || 'download';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const viewOnWeb = (media) => {
+    const binary = atob(getBase64Data(media.uri));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: media.mimeType || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+
+  const viewMedia = async (media) => {
+    try {
+      if (Platform.OS === 'web') {
+        viewOnWeb(media);
+        return;
+      }
+      await shareNativeFile(media);
+    } catch (err) {
+      console.error('View file error:', err);
+      const msg = err && err.message ? `Could not open this file.\n\n${err.message}` : 'Could not open this file.';
+      try { Alert.alert('Error', msg); } catch (_) { window.alert(msg); }
+    }
+  };
+
+  const downloadMedia = async (media) => {
+    try {
+      if (Platform.OS === 'web') {
+        downloadOnWeb(media.uri, media.name);
+        return;
+      }
+      await shareNativeFile(media);
+    } catch (err) {
+      console.error('Download error:', err);
+      const msg = err && err.message ? `Could not download this file.\n\n${err.message}` : 'Could not download this file.';
+      try { Alert.alert('Error', msg); } catch (_) { window.alert(msg); }
+    }
+  };
+
+  const pickFile = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*,.pdf,.doc,.docx,.txt,.zip';
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          if (file.size > 7 * 1024 * 1024) {
+            showMsg('File too large (max 7MB)');
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUrl = ev.target.result;
+            if (file.type.startsWith('image/')) {
+              sendMessage('📷 Image', { type: 'image', image: dataUrl, fileName: file.name });
+            } else {
+              sendMessage('📎 File', { type: 'file', fileData: dataUrl, fileName: file.name, fileType: file.type });
+            }
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+        return;
+      }
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/zip'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      if (asset.size > 7 * 1024 * 1024) {
         showMsg('File too large (max 7MB)');
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target.result;
-        if (file.type.startsWith('image/')) {
-          sendMessage('📷 Image', { type: 'image', image: dataUrl, fileName: file.name });
-        } else {
-          sendMessage('📎 File', { type: 'file', fileData: dataUrl, fileName: file.name, fileType: file.type });
-        }
-      };
-      reader.readAsDataURL(file);
-    };
-    input.click();
+      const file = new File(asset.uri);
+      const mimeType = asset.mimeType || 'application/octet-stream';
+      const dataUrl = `data:${mimeType};base64,${await file.base64()}`;
+      if (mimeType.startsWith('image/')) {
+        sendMessage('📷 Image', { type: 'image', image: dataUrl, fileName: asset.name });
+      } else {
+        sendMessage('📎 File', { type: 'file', fileData: dataUrl, fileName: asset.name, fileType: mimeType });
+      }
+    } catch (err) {
+      console.error('pickFile error:', err);
+      try { Alert.alert('Error', 'Could not pick file.'); } catch (_) { window.alert('Could not pick file.'); }
+    }
   };
 
   const renderTicks = (props) => {
@@ -344,11 +569,11 @@ export default function ChatScreen({ route, navigation }) {
       const isMine = currentMessage.user._id === currentUid;
       return (
         <View
-          {...(Platform.OS === 'web' ? { onContextMenu: (e) => { e.preventDefault(); currentMessage.user._id === currentUid ? confirmDelete(currentMessage) : reportMessage(currentMessage); } } : {})}
+          {...(Platform.OS === 'web' ? { onContextMenu: (e) => { e.preventDefault(); confirmDelete(currentMessage); } } : {})}
           style={{ alignSelf: isMine ? 'flex-end' : 'flex-start', maxWidth: 280 }}
         >
           <Pressable
-            onLongPress={() => { currentMessage.user._id === currentUid ? confirmDelete(currentMessage) : reportMessage(currentMessage); }}
+            onLongPress={() => confirmDelete(currentMessage)}
             style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
           >
             <View style={{
@@ -368,10 +593,22 @@ export default function ChatScreen({ route, navigation }) {
       );
     }
     const isFile = currentMessage.file;
+    const isMine = currentMessage.user._id === currentUid;
     return (
       <View
-        {...(Platform.OS === 'web' ? { onContextMenu: (e) => { e.preventDefault(); currentMessage.user._id === currentUid ? confirmDelete(currentMessage) : reportMessage(currentMessage); } } : {})}
+        {...(Platform.OS === 'web' ? { onContextMenu: (e) => { e.preventDefault(); confirmDelete(currentMessage); } } : {})}
       >
+        {currentMessage.replyingTo && (
+          <View style={[styles.replyQuote, isMine ? styles.replyQuoteRight : styles.replyQuoteLeft]}>
+            <Text style={styles.replyQuoteName} numberOfLines={1}>{currentMessage.replyingTo.senderName || 'User'}</Text>
+            <Text style={styles.replyQuoteText} numberOfLines={2}>{currentMessage.replyingTo.text}</Text>
+          </View>
+        )}
+        {currentMessage.forwarded && (
+          <Text style={[styles.forwardLabel, { alignSelf: isMine ? 'flex-end' : 'flex-start' }]}>
+            Forwarded{currentMessage.forwardedFrom ? ` from ${currentMessage.forwardedFrom}` : ''}
+          </Text>
+        )}
         <Bubble
           {...props}
           onLongPressMessage={handleLongPress}
@@ -432,6 +669,20 @@ export default function ChatScreen({ route, navigation }) {
 
   const renderInputToolbar = (props) => (
     <View style={{ paddingBottom: Platform.OS === 'web' ? 30 : 40 }}>
+      {replyTo ? (
+        <View style={styles.replyBar}>
+          <Icon name="reply" size={16} color="#f57c00" style={{ marginRight: 8 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.replyBarName} numberOfLines={1}>
+              Replying to {replyTo.user?._id === currentUid ? 'You' : (userData?.username || userData?.useremail?.split('@')[0] || 'User')}
+            </Text>
+            <Text style={styles.replyBarText} numberOfLines={1}>{replyTo.text}</Text>
+          </View>
+          <TouchableOpacity onPress={cancelReply} style={{ padding: 4 }}>
+            <Icon name="close" size={18} color="#888" />
+          </TouchableOpacity>
+        </View>
+      ) : null}
       {showEmoji ? (
         <View style={styles.emojiContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.emojiScroll}>
@@ -462,9 +713,17 @@ export default function ChatScreen({ route, navigation }) {
     const { currentMessage } = props;
     if (!currentMessage || currentMessage.file || currentMessage.deleted) return null;
     return (
-      <View style={{ padding: 4 }}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={{ padding: 4 }}
+        onPress={() => {
+          const mimeType = getDataUrlMeta(currentMessage.image);
+          const ext = mimeType.split('/')[1] || 'jpg';
+          setViewer({ type: 'image', uri: currentMessage.image, name: `image.${ext}`, mimeType, data: currentMessage.image });
+        }}
+      >
         <Image source={{ uri: currentMessage.image }} style={{ width: 200, height: 200, borderRadius: 12 }} resizeMode="cover" />
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -472,25 +731,10 @@ export default function ChatScreen({ route, navigation }) {
     const { currentMessage } = props;
     if (!currentMessage || !currentMessage.file || currentMessage.deleted) return null;
     return (
-      <TouchableOpacity onPress={() => {
-        if (currentMessage.file.data) {
-          const binary = atob(currentMessage.file.data.split(',')[1]);
-          const bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          const blob = new Blob([bytes], { type: currentMessage.file.mimeType || 'application/octet-stream' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = currentMessage.file.name || 'download';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 10000);
-        }
-      }} style={{ padding: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', margin: 4, borderRadius: 10 }}>
+      <TouchableOpacity onPress={() => setViewer({ type: 'file', uri: currentMessage.file.data, name: currentMessage.file.name || 'File', mimeType: currentMessage.file.mimeType, data: currentMessage.file.data })} style={{ padding: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', margin: 4, borderRadius: 10 }}>
         <Icon name="file-document-outline" size={36} color="#aaa" />
         <Text style={{ color: '#aaa', fontSize: 12, marginTop: 4, textAlign: 'center' }}>{currentMessage.file.name || 'File'}</Text>
-        <Text style={{ color: '#f57c00', fontSize: 11, marginTop: 4 }}>Tap to download</Text>
+        <Text style={{ color: '#f57c00', fontSize: 11, marginTop: 4 }}>Tap to view / download</Text>
       </TouchableOpacity>
     );
   };
@@ -562,6 +806,92 @@ export default function ChatScreen({ route, navigation }) {
         maxComposerHeight={120}
         bottomOffset={Platform.OS === 'web' ? 30 : 30}
       />
+      <Modal visible={!!viewer} transparent animationType="fade" onRequestClose={() => setViewer(null)}>
+        <View style={styles.viewerOverlay}>
+          <TouchableOpacity style={styles.viewerClose} onPress={() => setViewer(null)}>
+            <Icon name="close" size={26} color="#fff" />
+          </TouchableOpacity>
+          {viewer?.type === 'image' ? (
+            <Image source={{ uri: viewer.uri }} style={styles.viewerImage} resizeMode="contain" />
+          ) : (
+            <View style={styles.viewerFileBox}>
+              <Icon name="file-document-outline" size={72} color="#f57c00" />
+              <Text style={styles.viewerFileName}>{viewer?.name || 'File'}</Text>
+            </View>
+          )}
+          <View style={styles.viewerActions}>
+            {viewer?.type === 'file' ? (
+              <TouchableOpacity style={styles.viewerActionBtn} onPress={() => viewMedia(viewer)}>
+                <Icon name="eye-outline" size={22} color="#fff" />
+                <Text style={styles.viewerActionText}>View</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity style={styles.viewerActionBtn} onPress={() => downloadMedia(viewer)}>
+              <Icon name="download" size={22} color="#fff" />
+              <Text style={styles.viewerActionText}>Download</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={!!actionMsg} transparent animationType="fade" onRequestClose={closeActions}>
+        <TouchableOpacity style={styles.actionsOverlay} activeOpacity={1} onPress={closeActions}>
+          <View style={styles.actionsSheet}>
+            <Text style={styles.actionsTitle}>Message Options</Text>
+            {actionMsg && (
+              <>
+                {!actionMsg.deleted && (
+                  <>
+                    <ActionRow icon="reply" label="Reply" onPress={() => { startReply(actionMsg); closeActions(); }} />
+                    <ActionRow icon="content-copy" label="Copy" onPress={() => { copyMessage(actionMsg); closeActions(); }} />
+                    <ActionRow icon="forward" label="Forward" onPress={() => { openForward(actionMsg); closeActions(); }} />
+                  </>
+                )}
+                {actionMsg.user?._id === currentUid && !actionMsg.deleted && (
+                  <ActionRow danger icon="delete-forever" label="Delete for everyone" onPress={() => { deleteMessage(actionMsg._id); closeActions(); }} />
+                )}
+                <ActionRow danger icon="delete" label="Delete for me" onPress={() => { deleteForMe(actionMsg._id); closeActions(); }} />
+                <ActionRow danger icon="flag" label="Report" onPress={() => { reportMessage(actionMsg); closeActions(); }} />
+              </>
+            )}
+            <TouchableOpacity style={styles.actionsCancel} onPress={closeActions}>
+              <Text style={styles.actionsCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      <Modal visible={!!forwardMsg} transparent animationType="slide" onRequestClose={() => setForwardMsg(null)}>
+        <View style={styles.forwardOverlay}>
+          <View style={styles.forwardSheet}>
+            <View style={styles.forwardHeader}>
+              <Text style={styles.forwardTitle}>Forward to</Text>
+              <TouchableOpacity onPress={() => setForwardMsg(null)} style={{ padding: 4 }}>
+                <Icon name="close" size={22} color="#888" />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.forwardSearch}
+              placeholder="Search chats..."
+              placeholderTextColor="#888"
+              value={forwardQuery}
+              onChangeText={setForwardQuery}
+            />
+            <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
+              {forwardContacts
+                .filter(c => !forwardQuery.trim() || (c.name || c.id).toLowerCase().includes(forwardQuery.trim().toLowerCase()))
+                .map((c) => (
+                  <TouchableOpacity key={c.id} style={styles.forwardItem} onPress={() => forwardTo(c.id, forwardMsg)}>
+                    <View style={styles.forwardAvatar}>
+                      <Text style={styles.forwardAvatarText}>{(c.name || '?').charAt(0).toUpperCase()}</Text>
+                    </View>
+                    <Text style={styles.forwardItemName} numberOfLines={1}>{c.name || c.id}</Text>
+                    <Icon name="send" size={18} color="#f57c00" />
+                  </TouchableOpacity>
+                ))}
+              {forwardContacts.length === 0 && <Text style={styles.forwardEmpty}>No chats yet. Start a conversation to forward messages.</Text>}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -631,5 +961,223 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#fff',
     height: '100%',
+  },
+  viewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  viewerClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '75%',
+    borderRadius: 12,
+  },
+  viewerFileBox: {
+    alignItems: 'center',
+  },
+  viewerFileName: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
+    maxWidth: 300,
+  },
+  viewerActions: {
+    flexDirection: 'row',
+    marginTop: 24,
+    gap: 12,
+  },
+  viewerActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f57c00',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  viewerActionText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  replyQuote: {
+    maxWidth: 240,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 2,
+    borderLeftWidth: 3,
+  },
+  replyQuoteRight: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderLeftColor: '#fff',
+  },
+  replyQuoteLeft: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderLeftColor: '#f57c00',
+  },
+  replyQuoteName: {
+    color: '#f57c00',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  replyQuoteText: {
+    color: '#ddd',
+    fontSize: 13,
+  },
+  forwardLabel: {
+    color: '#f57c00',
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginBottom: 2,
+    paddingHorizontal: 4,
+  },
+  replyBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2C2C2C',
+    borderTopWidth: 1,
+    borderTopColor: '#3A3A3A',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  replyBarName: {
+    color: '#f57c00',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  replyBarText: {
+    color: '#aaa',
+    fontSize: 13,
+  },
+  forwardOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  forwardSheet: {
+    backgroundColor: '#222',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingBottom: 32,
+    maxHeight: '70%',
+  },
+  forwardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  forwardTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  forwardSearch: {
+    backgroundColor: '#2C2C2C',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  forwardItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2C2C2C',
+  },
+  forwardAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f57c00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  forwardAvatarText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  forwardItemName: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 15,
+  },
+  forwardEmpty: {
+    color: '#888',
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  actionsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  actionsSheet: {
+    backgroundColor: '#222',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  actionsTitle: {
+    color: '#888',
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 14,
+    paddingBottom: 8,
+  },
+  actionRowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  actionRowLabel: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  actionsCancel: {
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  actionsCancelText: {
+    color: '#f57c00',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

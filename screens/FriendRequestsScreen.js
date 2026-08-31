@@ -12,48 +12,53 @@ export default function FriendRequestsScreen() {
 
   useEffect(() => {
     if (!currentUid) return;
-    const reqRef = ref(realtimeDb, 'FriendRequests');
-    onValue(reqRef, async (snap) => {
-      const list = [];
-      if (snap.exists()) {
-        const promises = [];
-        snap.forEach((senderChild) => {
-          const senderUid = senderChild.key;
-          senderChild.forEach((reqChild) => {
-            const data = reqChild.val();
-            if (data.to === currentUid && data.status === 'pending') {
-              const p = get(child(ref(realtimeDb), `Users/${senderUid}`)).then(userSnap => {
-                const u = userSnap.val() || {};
-                list.push({ id: senderUid, username: u.username || 'Unknown', useremail: u.useremail || '', direction: 'incoming', ...data });
-              });
-              promises.push(p);
-            }
-          });
-        });
+    const incomingRef = ref(realtimeDb, `IncomingFriendRequests/${currentUid}`);
+    const sentRef = ref(realtimeDb, `FriendRequests/${currentUid}`);
 
-        snap.forEach((senderChild) => {
-          if (senderChild.key === currentUid) {
-            senderChild.forEach((reqChild) => {
-              const data = reqChild.val();
-              if (data.status === 'pending') {
-                const otherUid = data.to;
-                if (!list.find(r => r.id === otherUid && r.direction === 'incoming')) {
-                  const p = get(child(ref(realtimeDb), `Users/${otherUid}`)).then(userSnap => {
-                    const u = userSnap.val() || {};
-                    list.push({ id: otherUid, username: u.username || 'Unknown', useremail: u.useremail || '', direction: 'outgoing', ...data });
-                  });
-                  promises.push(p);
-                }
-              }
+    const loadRequests = async () => {
+      const list = [];
+      const promises = [];
+
+      const incomingSnap = await get(incomingRef);
+      if (incomingSnap.exists()) {
+        incomingSnap.forEach((senderChild) => {
+          const senderUid = senderChild.key;
+          const data = senderChild.val();
+          if (data && data.status === 'pending') {
+            const p = get(child(ref(realtimeDb), `Users/${senderUid}`)).then(userSnap => {
+              const u = userSnap.val() || {};
+              list.push({ id: senderUid, username: u.username || 'Unknown', useremail: u.useremail || '', direction: 'incoming', ...data });
             });
+            promises.push(p);
           }
         });
-        await Promise.all(promises);
       }
+
+      const sentSnap = await get(sentRef);
+      if (sentSnap.exists()) {
+        sentSnap.forEach((reqChild) => {
+          const data = reqChild.val();
+          if (data && data.status === 'pending') {
+            const otherUid = data.to;
+            const p = get(child(ref(realtimeDb), `Users/${otherUid}`)).then(userSnap => {
+              const u = userSnap.val() || {};
+              list.push({ id: otherUid, username: u.username || 'Unknown', useremail: u.useremail || '', direction: 'outgoing', ...data });
+            });
+            promises.push(p);
+          }
+        });
+      }
+
+      await Promise.all(promises);
       setRequests(list);
       setLoading(false);
-    });
-    return () => off(reqRef);
+    };
+
+    loadRequests();
+
+    const unsub1 = onValue(incomingRef, () => loadRequests());
+    const unsub2 = onValue(sentRef, () => loadRequests());
+    return () => { unsub1(); unsub2(); };
   }, [currentUid]);
 
   const showMsg = (title, msg) => {
@@ -69,6 +74,7 @@ export default function FriendRequestsScreen() {
       await set(ref(realtimeDb, `Friends/${currentUid}/${otherUid}`), { id: otherUid, username: otherUser.username || '', useremail: otherUser.useremail || '' });
       await set(ref(realtimeDb, `Friends/${otherUid}/${currentUid}`), { id: currentUid, username: myData.username || '', useremail: myData.useremail || '' });
       await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}`), null);
+      await set(ref(realtimeDb, `IncomingFriendRequests/${currentUid}/${otherUid}`), null);
       setRequests(prev => prev.filter(r => !(r.id === otherUid && r.direction === 'incoming')));
       showMsg('Accepted', `You are now friends with ${otherUser.username || otherUid}`);
     } catch (err) { showMsg('Error', err.message || 'Accept failed'); }
@@ -78,6 +84,7 @@ export default function FriendRequestsScreen() {
   const reject = async (otherUid) => {
     try {
       await set(ref(realtimeDb, `FriendRequests/${otherUid}/${currentUid}`), null);
+      await set(ref(realtimeDb, `IncomingFriendRequests/${currentUid}/${otherUid}`), null);
       setRequests(prev => prev.filter(r => !(r.id === otherUid && r.direction === 'incoming')));
       showMsg('Rejected', 'Friend request rejected');
     }
@@ -85,7 +92,10 @@ export default function FriendRequestsScreen() {
   };
 
   const cancel = async (otherUid) => {
-    try { await set(ref(realtimeDb, `FriendRequests/${currentUid}/${otherUid}`), null); }
+    try {
+      await set(ref(realtimeDb, `FriendRequests/${currentUid}/${otherUid}`), null);
+      await set(ref(realtimeDb, `IncomingFriendRequests/${otherUid}/${currentUid}`), null);
+    }
     catch (err) { showMsg('Error', err.message); }
   };
 
