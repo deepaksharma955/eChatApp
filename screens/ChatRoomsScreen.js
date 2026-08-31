@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { auth, realtimeDb } from '../firebase';
 import { ref, get, update } from 'firebase/database';
@@ -24,6 +24,19 @@ export default function ChatRoomsScreen({ navigation }) {
   const [joinedRooms, setJoinedRooms] = useState([]);
   const currentUid = auth.currentUser?.uid;
 
+  const DEFAULT_ROOMS = [
+    { id: 'room_general', name: 'General Chat', topic: 'general', description: 'Welcome! Talk about anything.', isChatRoom: true },
+    { id: 'room_travel', name: 'Travel Lovers', topic: 'travel', description: 'Share travel experiences.', isChatRoom: true },
+    { id: 'room_food', name: 'Foodies', topic: 'food', description: 'All about food and cooking.', isChatRoom: true },
+    { id: 'room_music', name: 'Music Fans', topic: 'music', description: 'Discuss your favorite music.', isChatRoom: true },
+    { id: 'room_movies', name: 'Movie Buffs', topic: 'movies', description: 'Talk about films and series.', isChatRoom: true },
+    { id: 'room_sports', name: 'Sports Talk', topic: 'sports', description: 'All sports discussions.', isChatRoom: true },
+    { id: 'room_tech', name: 'Technology', topic: 'tech', description: 'Latest in tech and gadgets.', isChatRoom: true },
+    { id: 'room_business', name: 'Business', topic: 'business', description: 'Business news and discussion.', isChatRoom: true },
+    { id: 'room_culture', name: 'Culture', topic: 'culture', description: 'Art, culture, and society.', isChatRoom: true },
+    { id: 'room_daily', name: 'Daily Life', topic: 'daily', description: 'Everyday life conversations.', isChatRoom: true },
+  ];
+
   useEffect(() => {
     setLoading(true);
     const groupsRef = ref(realtimeDb, 'Groups');
@@ -37,17 +50,16 @@ export default function ChatRoomsScreen({ navigation }) {
           }
         });
       }
-      if (items.length === 0) {
-        items.push(
-          { id: 'room_general', name: 'General Chat', topic: 'general', memberCount: 0, description: 'Welcome! Talk about anything.', isChatRoom: true },
-          { id: 'room_travel', name: 'Travel Lovers', topic: 'travel', memberCount: 0, description: 'Share travel experiences.', isChatRoom: true },
-          { id: 'room_food', name: 'Foodies', topic: 'food', memberCount: 0, description: 'All about food and cooking.', isChatRoom: true },
-          { id: 'room_music', name: 'Music Fans', topic: 'music', memberCount: 0, description: 'Discuss your favorite music.', isChatRoom: true },
-          { id: 'room_movies', name: 'Movie Buffs', topic: 'movies', memberCount: 0, description: 'Talk about films and series.', isChatRoom: true },
-          { id: 'room_sports', name: 'Sports Talk', topic: 'sports', memberCount: 0, description: 'All sports discussions.', isChatRoom: true },
-        );
-      }
-      setRooms(items);
+      const merged = [...DEFAULT_ROOMS];
+      items.forEach(fbItem => {
+        const idx = merged.findIndex(r => r.id === fbItem.id);
+        if (idx >= 0) merged[idx] = fbItem;
+        else merged.push(fbItem);
+      });
+      setRooms(merged);
+      setLoading(false);
+    }).catch(() => {
+      setRooms(DEFAULT_ROOMS);
       setLoading(false);
     });
   }, []);
@@ -61,14 +73,23 @@ export default function ChatRoomsScreen({ navigation }) {
 
   const joinRoom = async (room) => {
     if (!currentUid) return;
-    const membersRef = ref(realtimeDb, `Groups/${room.id}/members`);
-    const snap = await get(membersRef);
-    const members = snap.exists() ? snap.val() : {};
+    const groupRef = ref(realtimeDb, `Groups/${room.id}`);
+    const snap = await get(groupRef);
+    const existingData = snap.exists() ? snap.val() : {};
+    const members = existingData.members || {};
     if (!members[currentUid]) {
       members[currentUid] = true;
-      await update(ref(realtimeDb, `Groups/${room.id}`), { members });
+      await update(groupRef, {
+        members,
+        name: existingData.name || room.name,
+        description: existingData.description || room.description,
+        topic: existingData.topic || room.topic,
+        isChatRoom: true,
+      });
       await update(ref(realtimeDb, `Users/${currentUid}/joinedRooms/${room.id}`), { name: room.name, joinedAt: Date.now() });
       setJoinedRooms(prev => [...prev, room.id]);
+    } else if (!existingData.name) {
+      await update(groupRef, { name: room.name, description: existingData.description || room.description, topic: existingData.topic || room.topic, isChatRoom: true });
     }
     navigation.navigate('GroupChat', { groupId: room.id });
   };
@@ -78,66 +99,58 @@ export default function ChatRoomsScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Choose your interest</Text>
-      <FlatList
-        horizontal
-        data={TOPICS}
-        keyExtractor={item => item.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.topicsRow}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.topicChip, selectedTopic === item.id && { backgroundColor: item.color + '30', borderColor: item.color }]}
-            onPress={() => setSelectedTopic(selectedTopic === item.id ? null : item.id)}
-          >
-            <Icon name={item.icon} size={16} color={selectedTopic === item.id ? item.color : '#aaa'} />
-            <Text style={[styles.topicChipText, selectedTopic === item.id && { color: item.color }]}>{item.label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.topicsScroller} contentContainerStyle={styles.topicsRow}>
+        {TOPICS.map(item => (
+          <TouchableOpacity key={item.id} style={[styles.topicBtn, selectedTopic === item.id && { backgroundColor: item.color + '30', borderColor: item.color }]} onPress={() => setSelectedTopic(selectedTopic === item.id ? null : item.id)}>
+            <Text style={[styles.topicBtnText, selectedTopic === item.id && { color: item.color }]}>{item.label}</Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#f57c00" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color="#f57c00" style={{ marginTop: 10 }} />
       ) : (
-        <FlatList
-          data={filteredRooms}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.roomList}
-          ListEmptyComponent={<Text style={styles.emptyText}>No rooms for this topic</Text>}
-          renderItem={({ item }) => {
+        <ScrollView contentContainerStyle={styles.roomList} showsVerticalScrollIndicator={false}>
+          {filteredRooms.length === 0 ? (
+            <Text style={styles.emptyText}>No rooms for this topic</Text>
+          ) : filteredRooms.map(item => {
             const topic = TOPICS.find(t => t.id === item.topic);
             const isJoined = joinedRooms.includes(item.id);
+            const memberCount = item.members ? Object.keys(item.members).length : (item.memberCount || 0);
             return (
-              <TouchableOpacity style={styles.roomCard} onPress={() => joinRoom(item)} activeOpacity={0.7}>
-                <View style={[styles.roomIcon, { backgroundColor: (topic?.color || '#f57c00') + '20' }]}>
-                  <Icon name={topic?.icon || 'chat'} size={24} color={topic?.color || '#f57c00'} />
-                </View>
-                <View style={styles.roomInfo}>
-                  <Text style={styles.roomName}>{item.name}</Text>
-                  <Text style={styles.roomDesc}>{item.description}</Text>
-                  <Text style={styles.roomMeta}>{item.memberCount || 0} members {isJoined ? '· Joined' : ''}</Text>
-                </View>
-                <Icon name={isJoined ? 'check-circle' : 'chevron-right'} size={20} color={isJoined ? '#4CAF50' : '#555'} />
+              <TouchableOpacity key={item.id} style={[styles.roomCard, isJoined && { backgroundColor: (topic?.color || '#f57c00') + '20', borderColor: topic?.color || '#f57c00' }]} onPress={() => joinRoom(item)} activeOpacity={0.7}>
+                <Icon name={topic?.icon || 'chat'} size={14} color={topic?.color || '#f57c00'} />
+                <Text style={styles.roomName}>{item.name}</Text>
+                <View style={{ flex: 1 }} />
+                {memberCount > 0 ? (
+                  <View style={styles.roomMetaWrap}>
+                    <Icon name="account-group" size={12} color="#666" />
+                    <Text style={styles.roomMeta}>{memberCount}</Text>
+                  </View>
+                ) : null}
+                <Icon name={isJoined ? 'check-circle' : 'chevron-right'} size={16} color={isJoined ? '#4CAF50' : '#555'} style={styles.roomChevron} />
               </TouchableOpacity>
             );
-          }}
-        />
-      )}
+          })}
+        </ScrollView>
+        )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1E1E1E' },
-  heading: { color: '#fff', fontSize: 20, fontWeight: '700', padding: 16, paddingBottom: 8 },
-  topicsRow: { paddingHorizontal: 12, paddingBottom: 12, gap: 8 },
-  topicChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2C2C2C', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#3A3A3A', gap: 6 },
-  topicChipText: { color: '#aaa', fontSize: 13, fontWeight: '500' },
-  roomList: { padding: 16, paddingTop: 4 },
-  roomCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2C2C2C', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#3A3A3A' },
-  roomIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
-  roomInfo: { flex: 1 },
-  roomName: { color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 3 },
-  roomDesc: { color: '#888', fontSize: 13, marginBottom: 3 },
-  roomMeta: { color: '#666', fontSize: 12 },
+  heading: { color: '#fff', fontSize: 20, fontWeight: '700', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 0 },
+  topicsScroller: { flexGrow: 0 },
+  topicsRow: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 4, gap: 8 },
+  topicBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#3A3A3A', backgroundColor: '#2C2C2C' },
+  topicBtnText: { color: '#aaa', fontSize: 12, fontWeight: '500' },
+  roomList: { flexDirection: 'column', paddingHorizontal: 12, paddingTop: 0, paddingBottom: 40, gap: 6 },
+  roomCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2C2C2C', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#3A3A3A', gap: 8, marginBottom: 4 },
+  roomIconWrap: { width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  roomName: { color: '#fff', fontSize: 13, fontWeight: '500' },
+  roomMetaWrap: { flexDirection: 'row', alignItems: 'center', marginLeft: 4 },
+  roomMeta: { color: '#666', fontSize: 11, marginLeft: 2 },
+  roomChevron: { marginLeft: 2 },
   emptyText: { color: '#888', fontSize: 14, textAlign: 'center', marginTop: 40 },
 });

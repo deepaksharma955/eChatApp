@@ -254,6 +254,7 @@ export default function VideoCallScreen() {
       <FlatList
         data={friends.filter(f => f.status === 'online')}
         keyExtractor={item => item.uid}
+        contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={<Text style={styles.emptyText}>No friends online</Text>}
         renderItem={({ item }) => (
           <View style={styles.friendItem}>

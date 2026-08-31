@@ -96,7 +96,7 @@ export default function FriendRequestsScreen() {
       <FlatList
         data={requests}
         keyExtractor={item => item.id + item.direction}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Icon name="bell-off-outline" size={50} color="#555" />

@@ -185,7 +185,7 @@ export default function VoiceChatScreen() {
       <View style={styles.callContainer}>
         <View style={styles.callInfo}>
           <View style={styles.callAvatar}>
-            <Icon name="phone-voice" size={50} color="#f57c00" />
+            <Icon name="phone-settings" size={50} color="#f57c00" />
           </View>
           <Text style={styles.callName}>{callPartner?.name || 'Connecting...'}</Text>
           <Text style={styles.callStatus}>{callStatus}</Text>
@@ -225,6 +225,7 @@ export default function VoiceChatScreen() {
       <FlatList
         data={friends.filter(f => f.status === 'online')}
         keyExtractor={item => item.uid}
+        contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={<Text style={styles.emptyText}>No friends online</Text>}
         renderItem={({ item }) => (
           <View style={styles.friendItem}>
@@ -247,6 +248,7 @@ export default function VoiceChatScreen() {
       <FlatList
         data={friends}
         keyExtractor={item => item.uid}
+        contentContainerStyle={{ paddingBottom: 40 }}
         ListEmptyComponent={<Text style={styles.emptyText}>No friends yet</Text>}
         renderItem={({ item }) => (
           <View style={styles.friendItem}>

@@ -75,6 +75,7 @@ export default function AddMemberScreen({ route, navigation }) {
       <FlatList
         data={availableFriends}
         keyExtractor={item => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
         renderItem={({ item }) => {
           const isSel = selected[item.id];
           return (

@@ -76,7 +76,7 @@ export default function DiscoverGroupsScreen({ navigation }) {
       <FlatList
         data={filtered}
         keyExtractor={item => item.id}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         renderItem={({ item }) => (
           <View style={styles.groupCard}>
             <View style={styles.groupIcon}>

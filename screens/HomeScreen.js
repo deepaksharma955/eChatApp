@@ -237,6 +237,7 @@ export default function HomeScreen({ navigation }) {
           data={chatItems}
           keyExtractor={item => item.id + (item.type || '')}
           renderItem={renderItem}
+          contentContainerStyle={{ paddingBottom: 40 }}
           ListHeaderComponent={
             onlineCount > 0 ? (
               <View style={styles.onlineHeader}>
