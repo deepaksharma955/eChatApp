@@ -1,0 +1,18 @@
+services:
+  - name: ediscuss-ai-server
+    dockerfile: server/Dockerfile
+    ports:
+      - port: 3001
+        protocol: http
+        public: true
+    env:
+      - name: PORT
+        value: "3001"
+      - name: GROQ_API_KEY
+        from:
+          type: SECRET
+          name: GROQ_API_KEY
+    healthcheck:
+      path: /api/health
+      interval: 30
+      timeout: 10
