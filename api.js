@@ -3,7 +3,7 @@ import { getCached, setCached } from './utils/cache';
 
 const LIVE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://echatapp-nyxt.onrender.com';
 const DEV_PORT = 3001;
-const TIMEOUT = 15000;
+const TIMEOUT = 30000;
 const API_KEY = process.env.EXPO_PUBLIC_API_KEY || '';
 
 const getBaseUrl = () => {

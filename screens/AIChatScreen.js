@@ -23,7 +23,7 @@ export default function AIChatScreen() {
       const data = await api.post('/api/ai-chat', { message: userMsg.text, history });
       setMessages(prev => [...prev, { role: 'ai', text: data.reply }]);
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'ai', text: `Error: ${e.message}. Make sure the AI server is running (cd server && npm start).` }]);
+      setMessages(prev => [...prev, { role: 'ai', text: `Error: ${e.message}. The server may be waking up, please try again in a few seconds.` }]);
     }
     setLoading(false);
   };
@@ -76,7 +76,7 @@ export default function AIChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1E1E1E' },
-  chatList: { padding: 16, paddingBottom: Platform.OS === 'web' ? 20 : 40 },
+  chatList: { padding: 16, paddingBottom: Platform.OS === 'web' ? 30 : 40 },
   bubble: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end' },
   aiBubble: { justifyContent: 'flex-start' },
   userBubble: { justifyContent: 'flex-end' },
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   bubbleText: { color: '#eee', fontSize: 15, lineHeight: 21 },
   typing: { flexDirection: 'row', alignItems: 'center', marginLeft: 36, marginBottom: 8 },
   typingText: { color: '#888', fontSize: 13, marginLeft: 8 },
-  inputBar: { flexDirection: 'row', alignItems: 'flex-end', padding: 12, paddingBottom: Platform.OS === 'web' ? 12 : 36, borderTopWidth: 1, borderTopColor: '#2C2C2C', backgroundColor: '#1A1A1A' },
+  inputBar: { flexDirection: 'row', alignItems: 'flex-end', padding: 12, paddingBottom: Platform.OS === 'web' ? 30 : 40, borderTopWidth: 1, borderTopColor: '#2C2C2C', backgroundColor: '#1A1A1A' },
   input: { flex: 1, backgroundColor: '#2C2C2C', borderRadius: 22, paddingHorizontal: 18, paddingVertical: 10, color: '#fff', fontSize: 15, maxHeight: 100, marginRight: 10 },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#f57c00', justifyContent: 'center', alignItems: 'center' },
 });

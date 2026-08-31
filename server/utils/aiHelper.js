@@ -100,8 +100,19 @@ async function callAIChat(messages, options = {}) {
 }
 
 function extractJSON(raw) {
-  const cleaned = raw.replace(/```(?:json)?\s*/gi, '').replace(/\s*```/g, '').trim();
-  return JSON.parse(cleaned);
+  if (!raw) throw new Error('Empty AI response');
+  const cleaned = String(raw).replace(/```(?:json)?\s*/gi, '').replace(/\s*```/g, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch (_) {}
+    }
+    throw new Error('Invalid JSON from AI: ' + cleaned.slice(0, 300));
+  }
 }
 
 module.exports = { callAI, callAIChat, extractJSON };
