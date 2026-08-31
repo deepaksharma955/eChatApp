@@ -6,11 +6,21 @@ const GROQ_KEY = process.env.GROQ_API_KEY;
 const OLLAMA_BASE = process.env.OLLAMA_BASE_URL;
 
 const GROQ_BASE = 'https://api.groq.com/openai';
+const GROQ_MODEL = 'openai/gpt-oss-20b';
+
+function cleanAIResponse(text) {
+  if (!text) return '';
+  return text
+    .replace(/Set\s+(OPENAI_API_KEY|GEMINI_API_KEY|GROQ_API_KEY)[^.]*\.?/gi, '')
+    .replace(/configure\s+(OPENAI|GEMINI|GROQ)[^.]*\.?/gi, '')
+    .replace(/(OPENAI_API_KEY|GEMINI_API_KEY)[^.]*\.(?:Set|Get|Add)[^.]*\.?/gi, '')
+    .trim();
+}
 
 async function openaiCompatibleChat(messages, options = {}) {
   const useGroq = GROQ_KEY && !OPENAI_KEY && !OLLAMA_BASE;
   const baseUrl = OLLAMA_BASE || (useGroq ? GROQ_BASE : 'https://api.openai.com');
-  const model = options.model || (OLLAMA_BASE ? 'llama3.2' : useGroq ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini');
+  const model = options.model || (OLLAMA_BASE ? 'llama3.2' : useGroq ? GROQ_MODEL : 'gpt-4o-mini');
   const headers = { 'Content-Type': 'application/json' };
   const apiKey = GROQ_KEY && !OPENAI_KEY && !OLLAMA_BASE ? GROQ_KEY : OPENAI_KEY;
   if (!OLLAMA_BASE && apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
@@ -32,7 +42,7 @@ async function openaiCompatibleChat(messages, options = {}) {
       return null;
     }
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || '';
+    return cleanAIResponse(data.choices?.[0]?.message?.content || '');
   } catch (e) {
     console.error('AI error:', e.message);
     return null;
@@ -47,7 +57,7 @@ async function callAI(systemPrompt, userMessage, options = {}) {
 
   if (OLLAMA_BASE) return openaiCompatibleChat(messages, { ...options, model: options.model || 'llama3.2' });
   if (OPENAI_KEY) return openaiCompatibleChat(messages, options);
-  if (GROQ_KEY) return openaiCompatibleChat(messages, { ...options, model: 'llama-3.3-70b-versatile' });
+  if (GROQ_KEY) return openaiCompatibleChat(messages, { ...options, model: GROQ_MODEL });
 
   if (GEMINI_KEY) {
     try {
@@ -73,7 +83,7 @@ async function callAI(systemPrompt, userMessage, options = {}) {
 async function callAIChat(messages, options = {}) {
   if (OLLAMA_BASE) return openaiCompatibleChat(messages, { ...options, model: options.model || 'llama3.2' });
   if (OPENAI_KEY) return openaiCompatibleChat(messages, options);
-  if (GROQ_KEY) return openaiCompatibleChat(messages, { ...options, model: 'llama-3.3-70b-versatile' });
+  if (GROQ_KEY) return openaiCompatibleChat(messages, { ...options, model: GROQ_MODEL });
 
   if (GEMINI_KEY) {
     const sysMsg = messages.find(m => m.role === 'system')?.content || '';
