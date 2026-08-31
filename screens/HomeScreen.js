@@ -1,9 +1,12 @@
 import React, { useLayoutEffect, useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, AppState } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { auth, realtimeDb } from '../firebase';
 import { ref, onValue, off, get } from 'firebase/database';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { SkeletonChat } from '../components/Skeleton';
+import { scheduleFriendStatusNotification, scheduleLocalNotification } from '../notifications';
+import * as Notifications from 'expo-notifications';
 
 const AVATAR_COLORS = ['#f57c00', '#e91e63', '#9c27b0', '#3f51b5', '#009688', '#4caf50', '#ff5722', '#795348'];
 
@@ -30,7 +33,10 @@ function getAvatarColor(name) {
 export default function HomeScreen({ navigation }) {
   const [chatItems, setChatItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [onlineCount, setOnlineCount] = useState(0);
   const currentUid = auth.currentUser?.uid;
+  const prevStatusRef = useRef({});
+  const prevUnread = useRef({});
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -40,29 +46,44 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       ),
       headerRight: () => (
-        <TouchableOpacity style={{ marginRight: 16 }} onPress={() => navigation.navigate('Search')}>
-          <Icon name="account-search" size={26} color="#f57c00" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
+          {onlineCount > 0 && (
+            <View style={styles.onlineCountBadge}>
+              <View style={styles.onlineDot} />
+              <Text style={styles.onlineCountText}>{onlineCount}</Text>
+            </View>
+          )}
+          <TouchableOpacity onPress={() => navigation.navigate('Search')} style={{ marginLeft: onlineCount > 0 ? 12 : 0 }}>
+            <Icon name="account-search" size={26} color="#f57c00" />
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation]);
-
-  const prevUnread = useRef({});
+  }, [navigation, onlineCount]);
 
   useEffect(() => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
+    if (Platform.OS === 'web') {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
     }
   }, []);
 
   useEffect(() => {
+    const appState = AppState.currentState;
     chatItems.forEach(item => {
       if (item.unreadCount > (prevUnread.current[item.id] || 0) && item.type === 'chat') {
-        try {
-          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            new Notification(item.name, { body: `${item.unreadCount} new message${item.unreadCount > 1 ? 's' : ''}` });
+        if (appState !== 'active') {
+          if (Platform.OS !== 'web') {
+            scheduleLocalNotification(item.name, `${item.unreadCount} new message${item.unreadCount > 1 ? 's' : ''}`, item.id, false);
+          } else {
+            try {
+              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                new Notification(item.name, { body: `${item.unreadCount} new message${item.unreadCount > 1 ? 's' : ''}` });
+              }
+            } catch (_) {}
           }
-        } catch (_) {}
+        }
       }
       prevUnread.current[item.id] = item.unreadCount || 0;
     });
@@ -73,14 +94,18 @@ export default function HomeScreen({ navigation }) {
     setLoading(true);
 
     const chatlistRef = ref(realtimeDb, `Chatlist/${currentUid}`);
+    const statusUnsubs = [];
+
     const onChatData = async (snapshot) => {
       const items = [];
+      const friendUids = [];
       if (snapshot.exists()) {
         const promises = [];
         snapshot.forEach((childSnap) => {
           const otherUid = childSnap.key;
           const chatData = childSnap.val() || {};
           const unreadCount = chatData.unreadCount || 0;
+          friendUids.push(otherUid);
           const p = get(ref(realtimeDb, `Users/${otherUid}`)).then(us => {
             if (us.exists()) {
               const d = us.val();
@@ -92,23 +117,76 @@ export default function HomeScreen({ navigation }) {
         await Promise.all(promises);
       }
 
+      const CHAT_ROOM_NAMES = {
+        room_general: 'General Chat', room_travel: 'Travel Lovers',
+        room_food: 'Foodies', room_music: 'Music Fans', room_movies: 'Movie Buffs',
+        room_sports: 'Sports Talk', room_tech: 'Technology', room_business: 'Business',
+        room_culture: 'Culture', room_daily: 'Daily Life',
+      };
       const groupsRef = ref(realtimeDb, 'Groups');
       const gSnap = await get(groupsRef);
       if (gSnap.exists()) {
         gSnap.forEach((childSnap) => {
           const d = childSnap.val();
           if (d.members && d.members[currentUid]) {
-            items.push({ id: childSnap.key, name: d.name || 'Group', sub: d.description || `${Object.keys(d.members || {}).length} members`, type: 'group' });
+            items.push({ id: childSnap.key, name: d.name || CHAT_ROOM_NAMES[childSnap.key] || 'Group', sub: d.description || `${Object.keys(d.members || {}).length} members`, type: 'group' });
           }
         });
       }
 
       setChatItems([...items]);
+
+      statusUnsubs.forEach(u => u());
+      statusUnsubs.length = 0;
+
+      let count = 0;
+      items.forEach(item => {
+        if (item.type === 'chat' && item.status === 'online') count++;
+      });
+      setOnlineCount(count);
+
+      friendUids.forEach(uid => {
+        const userStatusRef = ref(realtimeDb, `Users/${uid}/status`);
+        const unsub = onValue(userStatusRef, (snap) => {
+          const newStatus = snap.val() || 'offline';
+          const prevStatus = prevStatusRef.current[uid];
+          prevStatusRef.current[uid] = newStatus;
+
+          if (prevStatus && prevStatus !== newStatus && newStatus === 'online') {
+            if (Platform.OS !== 'web') {
+              const friend = items.find(i => i.id === uid);
+              if (friend) {
+                scheduleFriendStatusNotification(friend.name, true);
+              }
+            }
+          }
+
+          setChatItems(prev => {
+            let onlineC = 0;
+            const updated = prev.map(item => {
+              if (item.id === uid && item.type === 'chat') {
+                const newItem = { ...item, status: newStatus };
+                if (newStatus === 'online') onlineC++;
+                return newItem;
+              }
+              if (item.type === 'chat' && item.status === 'online') onlineC++;
+              return item;
+            });
+            setOnlineCount(onlineC);
+            return updated;
+          });
+        });
+        statusUnsubs.push(unsub);
+      });
+
       setLoading(false);
     };
 
     onValue(chatlistRef, onChatData);
-    return () => off(chatlistRef, 'value', onChatData);
+    return () => {
+      off(chatlistRef, 'value', onChatData);
+      statusUnsubs.forEach(u => u());
+    };
   }, [currentUid]));
 
   const onPress = (item) => {
@@ -153,14 +231,20 @@ export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f57c00" />
-        </View>
+        <SkeletonChat count={8} style={{ padding: 16 }} />
       ) : (
         <FlatList
           data={chatItems}
           keyExtractor={item => item.id + (item.type || '')}
           renderItem={renderItem}
+          ListHeaderComponent={
+            onlineCount > 0 ? (
+              <View style={styles.onlineHeader}>
+                <View style={styles.onlineHeaderDot} />
+                <Text style={styles.onlineHeaderText}>{onlineCount} friend{onlineCount !== 1 ? 's' : ''} online</Text>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconWrap}>
@@ -178,7 +262,12 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1E1E1E' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  onlineHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16, backgroundColor: 'rgba(76,175,80,0.1)', borderBottomWidth: 1, borderBottomColor: '#2C2C2C' },
+  onlineHeaderDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50', marginRight: 8 },
+  onlineHeaderText: { color: '#4CAF50', fontSize: 14, fontWeight: '600' },
+  onlineCountBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(76,175,80,0.15)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, gap: 5 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50' },
+  onlineCountText: { color: '#4CAF50', fontSize: 13, fontWeight: '700' },
   chatItem: { flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderBottomColor: '#2C2C2C', alignItems: 'center' },
   avatar: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginRight: 14, position: 'relative' },
   avatarText: { color: '#fff', fontSize: 20, fontWeight: '700' },
