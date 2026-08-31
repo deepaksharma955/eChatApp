@@ -13,6 +13,7 @@
         "buildType": "apk"
       },
       "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://echatapp-nyxt.onrender.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "798969223897-msjavdhbscq2giivdr7s1fsnm6udrsos.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "798969223897-msjavdhbscq2giivdr7s1fsnm6udrsos.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "798969223897-koraoapkurv08cdll709nceubrg69a4j.apps.googleusercontent.com"
@@ -20,7 +21,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://echatapp-production-fe62.up.railway.app",
+        "EXPO_PUBLIC_BACKEND_URL": "https://echatapp-nyxt.onrender.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "798969223897-msjavdhbscq2giivdr7s1fsnm6udrsos.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "798969223897-msjavdhbscq2giivdr7s1fsnm6udrsos.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "798969223897-koraoapkurv08cdll709nceubrg69a4j.apps.googleusercontent.com"
