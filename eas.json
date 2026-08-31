@@ -20,6 +20,9 @@
       }
     },
     "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "EXPO_PUBLIC_BACKEND_URL": "https://echatapp-nyxt.onrender.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "798969223897-msjavdhbscq2giivdr7s1fsnm6udrsos.apps.googleusercontent.com",
